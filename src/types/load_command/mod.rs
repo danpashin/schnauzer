@@ -381,27 +381,39 @@ impl LcVariant {
                 Ok(Self::Rpath(c))
             }
             LC_CODE_SIGNATURE => {
-                let c = reader_mut.ioread_with(endian)?;
+                std::mem::drop(reader_mut);
+                let c =
+                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
                 Ok(Self::CodeSignature(c))
             }
             LC_SEGMENT_SPLIT_INFO => {
-                let c = reader_mut.ioread_with(endian)?;
+                std::mem::drop(reader_mut);
+                let c =
+                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
                 Ok(Self::SegmentSplitInfo(c))
             }
             LC_FUNCTION_STARTS => {
-                let c = reader_mut.ioread_with(endian)?;
+                std::mem::drop(reader_mut);
+                let c =
+                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
                 Ok(Self::FunctionStarts(c))
             }
             LC_DATA_IN_CODE => {
-                let c = reader_mut.ioread_with(endian)?;
+                std::mem::drop(reader_mut);
+                let c =
+                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
                 Ok(Self::DataInCode(c))
             }
             LC_DYLIB_CODE_SIGN_DRS => {
-                let c = reader_mut.ioread_with(endian)?;
+                std::mem::drop(reader_mut);
+                let c =
+                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
                 Ok(Self::DylibCodeSignature(c))
             }
             LC_LINKER_OPTIMIZATION_HINT => {
-                let c = reader_mut.ioread_with(endian)?;
+                std::mem::drop(reader_mut);
+                let c =
+                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
                 Ok(Self::LinkerOptimizationHint(c))
             }
             LC_ENCRYPTION_INFO => {
