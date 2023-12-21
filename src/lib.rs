@@ -8,7 +8,11 @@ pub mod types;
 pub mod constants;
 pub mod fmt_ext;
 pub mod auto_enum_fields;
+
+#[cfg(feature = "cli")]
 pub mod output;
+
+#[cfg(feature = "cli")]
 pub mod commands;
 
 mod reader;
