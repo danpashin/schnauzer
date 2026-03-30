@@ -28,7 +28,11 @@ impl HelpStringBuilder {
 
     pub(crate) fn build_string(&self) -> String {
         let description = match &self.description {
-            Some(description) => format!("\nDescription:\n{} - {}\n", self.command.bright_green(), description.bright_white()),
+            Some(description) => format!(
+                "\nDescription:\n{} - {}\n",
+                self.command.bright_green(),
+                description.bright_white()
+            ),
             None => "".into(),
         };
 

@@ -1,7 +1,7 @@
 use crate::ObjectType;
 use crate::Parser;
 use crate::Result;
-use std::{path::Path};
+use std::path::Path;
 
 pub(crate) fn load_object_type_with(path: &str) -> Result<ObjectType> {
     let path = Path::new(&path);

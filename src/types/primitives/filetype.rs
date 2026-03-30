@@ -1,25 +1,25 @@
 //! <https://opensource.apple.com/source/xnu/xnu-4570.71.2/EXTERNAL_HEADERS/mach-o/loader.h.auto.html>
-//! The layout of the file depends on the filetype.  For all but the MH_OBJECT
+//! The layout of the file depends on the filetype.  For all but the `MH_OBJECT`
 //! file type the segments are padded out and aligned on a segment alignment
-//! boundary for efficient demand pageing.  The MH_EXECUTE, MH_FVMLIB, MH_DYLIB,
-//! MH_DYLINKER and MH_BUNDLE file types also have the headers included as part
+//! boundary for efficient demand pageing.  The `MH_EXECUTE`, `MH_FVMLIB`, `MH_DYLIB`,
+//! `MH_DYLINKER` and `MH_BUNDLE` file types also have the headers included as part
 //! of their first segment.
 //!
-//! The file type MH_OBJECT is a compact format intended as output of the
+//! The file type `MH_OBJECT` is a compact format intended as output of the
 //! assembler and input (and possibly output) of the link editor (the .o
 //! format).  All sections are in one unnamed segment with no segment padding.
 //! This format is used as an executable format when the file is so small the
 //! segment padding greatly increases its size.
 //!
-//! The file type MH_PRELOAD is an executable format intended for things that
+//! The file type `MH_PRELOAD` is an executable format intended for things that
 //! are not executed under the kernel (proms, stand alones, kernels, etc).  The
 //! format can be executed under the kernel but may demand paged it and not
 //! preload it before execution.
 //!
-//! A core file is in MH_CORE format and can be any in an arbritray legal
+//! A core file is in `MH_CORE` format and can be any in an arbritray legal
 //! Mach-O file.
 //!
-//! Constants for the filetype field of the mach_header
+//! Constants for the filetype field of the `mach_header`
 
 use std::fmt::Debug;
 use std::fmt::Display;
@@ -47,7 +47,7 @@ pub mod filetype_constants {
     pub const MH_DYLIB_STUB: u32 = 0x9;
     /// companion file with only debug sections  
     pub const MH_DSYM: u32 = 0xa;
-    /// x86_64 kexts  
+    /// `x86_64` kexts
     pub const MH_KEXT_BUNDLE: u32 = 0xb;
 }
 
@@ -57,6 +57,7 @@ use self::filetype_constants::*;
 pub struct FileType(pub u32);
 
 impl FileType {
+    #[must_use]
     pub fn string_value(&self) -> String {
         match self.0 {
             MH_OBJECT => "Object".to_string(),

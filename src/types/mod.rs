@@ -1,8 +1,8 @@
 use scroll::IOread;
-use std::fmt::{Debug};
+use std::fmt::Debug;
 
-use super::result::Result;
 use super::reader::Reader;
+use super::result::Result;
 
 pub mod primitives;
 pub use primitives::*;
@@ -42,8 +42,6 @@ pub use super::fmt_ext;
 
 pub use super::auto_enum_fields;
 
-pub(crate) use super::constants;
-
 #[derive(Debug)]
 pub enum ObjectType {
     Fat(FatObject),
@@ -65,15 +63,17 @@ impl ObjectType {
 }
 
 impl ObjectType {
+    #[must_use]
     pub fn mach_object_with_arch(&self, arch: &str) -> Option<MachObject> {
-        self.mach_objects().into_iter().find(|o| {
-            match o.header.printable_cpu() {
+        self.mach_objects()
+            .into_iter()
+            .find(|o| match o.header.printable_cpu() {
                 Some(cpu) => cpu.to_string() == arch,
                 None => false,
-            }
-        })
+            })
     }
 
+    #[must_use]
     pub fn mach_objects(&self) -> Vec<MachObject> {
         match self {
             ObjectType::Fat(f) => f.objects(),
@@ -81,15 +81,15 @@ impl ObjectType {
         }
     }
 
+    #[must_use]
     pub fn arch_with_name(&self, name: &str) -> Option<FatArch> {
-        self.archs().into_iter().find(|a| {
-            match a.printable_cpu() {
-                Some(cpu) => cpu.to_string() == name,
-                None => false,
-            }
+        self.archs().into_iter().find(|a| match a.printable_cpu() {
+            Some(cpu) => cpu.to_string() == name,
+            None => false,
         })
     }
 
+    #[must_use]
     pub fn archs(&self) -> Vec<FatArch> {
         match &self {
             ObjectType::Fat(fat) => fat.arch_iterator().collect(),

@@ -1,9 +1,9 @@
 use crate::MachObject;
 
-use super::constants::*;
 use super::FatArch;
 use super::Reader;
 use super::Result;
+use crate::constants::*;
 use scroll::IOread;
 
 use std::fmt::Debug;
@@ -25,7 +25,7 @@ impl FatObject {
         let nfat_arch: u32 = reader.ioread_with(scroll::BE)?;
 
         Ok(FatObject {
-            reader: reader.clone(),
+            reader,
             arch_list_offset: BYTES_PER_FAT_HEADER,
             nfat_arch,
         })
@@ -34,16 +34,17 @@ impl FatObject {
 
 impl FatObject {
     /// Iterate over architectures
+    #[must_use]
     pub fn arch_iterator(&self) -> FatArchIterator {
-        FatArchIterator::build(self.reader.clone(), self.nfat_arch, self.arch_list_offset).unwrap()
+        FatArchIterator::build(self.reader.clone(), self.nfat_arch, self.arch_list_offset)
     }
 
     /// Collect all existing objects
+    #[must_use]
     pub fn objects(&self) -> Vec<MachObject> {
-        self.arch_iterator().filter_map(|a| match a.object() {
-            Ok(o) => Some(o),
-            Err(_) => None,
-        }).collect()
+        self.arch_iterator()
+            .filter_map(|a| a.object().ok())
+            .collect()
     }
 }
 
@@ -55,7 +56,7 @@ impl Debug for FatObject {
             .field("arch_list_offset", &self.arch_list_offset)
             .field("nfat_arch", &self.nfat_arch)
             .field("arch_iterator()", &archs)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -70,13 +71,14 @@ pub struct FatArchIterator {
 }
 
 impl FatArchIterator {
-    fn build(reader: Reader, nfat_arch: u32, base_offset: usize) -> Result<FatArchIterator> {
-        Ok(FatArchIterator {
+    #[must_use]
+    fn build(reader: Reader, nfat_arch: u32, base_offset: usize) -> FatArchIterator {
+        FatArchIterator {
             reader,
             nfat_arch,
             base_offset,
             current: 0,
-        })
+        }
     }
 }
 
@@ -91,6 +93,6 @@ impl Iterator for FatArchIterator {
 
         self.current += 1;
 
-        Some(FatArch::parse(self.reader.clone(), offset).unwrap())
+        FatArch::parse(self.reader.clone(), offset as u64).ok()
     }
 }

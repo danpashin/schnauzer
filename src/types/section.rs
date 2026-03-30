@@ -43,7 +43,7 @@ impl Section {
         ctx: X64Context,
         object_file_offset: u64,
     ) -> Result<Self> {
-        let endian = ctx.endian().clone();
+        let endian = *ctx.endian();
 
         let sectname: Str16Bytes = reader.ioread_with(endian)?;
         let segname: Str16Bytes = reader.ioread_with(endian)?;
@@ -85,27 +85,19 @@ impl Section {
 
         let mut reader = self.reader.clone();
         reader.seek(SeekFrom::Start(
-            self.object_file_offset + self.offset as u64,
+            self.object_file_offset + u64::from(self.offset),
         ))?;
 
-        let mut remainig = self.size.0 as usize;
+        let mut remainig = usize::try_from(self.size.0)
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::FileTooLarge, err))?;
 
-        let mut tmp = [0u8; BUFFER_SIZE];
+        let mut tmp = vec![0u8; BUFFER_SIZE];
 
         while remainig > 0 {
             let to_read = min(remainig, BUFFER_SIZE);
 
-            match reader.read_exact(&mut tmp[..to_read]) {
-                Ok(_) => match out.write_all(&mut tmp[..to_read]) {
-                    Ok(_) => (),
-                    Err(e) => {
-                        return Err(crate::result::Error::Other(Box::new(e)));
-                    }
-                },
-                Err(e) => {
-                    return Err(crate::result::Error::Other(Box::new(e)));
-                }
-            }
+            reader.read_exact(&mut tmp[..to_read])?;
+            out.write_all(&tmp[..to_read])?;
 
             remainig -= to_read;
         }
@@ -134,11 +126,12 @@ impl SizeWith<X64Context> for Section {
 }
 
 impl Section {
+    #[must_use]
     pub fn relocations_iterator(&self) -> RelocationIterator {
         RelocationIterator::new(
             self.reader.clone(),
             self.nreloc,
-            self.object_file_offset + self.reloff as u64,
+            self.object_file_offset + u64::from(self.reloff),
             self.endian,
         )
     }
@@ -157,10 +150,10 @@ pub struct RelocationIterator {
 impl RelocationIterator {
     fn new(reader: Reader, count: u32, base_offset: u64, endian: Endian) -> Self {
         RelocationIterator {
-            reader: reader,
-            count: count,
-            base_offset: base_offset,
-            endian: endian,
+            reader,
+            count,
+            base_offset,
+            endian,
             current: 0,
         }
     }
@@ -174,19 +167,16 @@ impl Iterator for RelocationIterator {
             return None;
         }
 
-        let offset =
-            self.base_offset + RelocationInfo::size_with(&self.endian) as u64 * self.current as u64;
+        let offset = self.base_offset
+            + RelocationInfo::size_with(&self.endian) as u64 * u64::from(self.current);
         self.current += 1;
 
         let mut reader = self.reader.clone();
-        if let Err(_) = reader.seek(SeekFrom::Start(offset as u64)) {
+        if reader.seek(SeekFrom::Start(offset)).is_err() {
             return None;
         }
 
-        match reader.ioread_with::<RelocationInfo>(self.endian) {
-            Ok(info) => Some(info),
-            Err(_) => None,
-        }
+        reader.ioread_with::<RelocationInfo>(self.endian).ok()
     }
 }
 

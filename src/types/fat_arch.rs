@@ -1,10 +1,10 @@
-use super::Reader;
-use scroll::IOread;
 use super::primitives::*;
-use super::Result;
 use super::MachObject;
+use super::Reader;
+use super::Result;
+use scroll::IOread;
 
-use std::fmt::{Debug};
+use std::fmt::Debug;
 use std::io::{Seek, SeekFrom};
 
 use super::auto_enum_fields::*;
@@ -22,9 +22,9 @@ pub struct FatArch {
 }
 
 impl FatArch {
-    pub(super) fn parse(mut reader: Reader, base_offset: usize) -> Result<FatArch> {
+    pub(super) fn parse(mut reader: Reader, base_offset: u64) -> Result<FatArch> {
         const ENDIAN: scroll::Endian = scroll::BE;
-        reader.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset))?;
 
         let cpu_type: CPUType = reader.ioread_with(ENDIAN)?;
         let cpu_subtype: CPUSubtype = reader.ioread_with(ENDIAN)?;
@@ -45,9 +45,10 @@ impl FatArch {
 
 impl FatArch {
     pub fn object(&self) -> Result<MachObject> {
-        MachObject::parse(self.reader.clone(), self.offset as usize)
+        MachObject::parse(self.reader.clone(), u64::from(self.offset))
     }
 
+    #[must_use]
     pub fn printable_cpu(&self) -> Option<PrintableCPU> {
         PrintableCPU::new(self.cputype, self.cpusubtype)
     }
@@ -63,7 +64,7 @@ impl Debug for FatArch {
             .field("size", &self.size)
             .field("align", &self.align);
 
-        if let Result::Ok(h) = MachObject::parse(self.reader.clone(), self.offset as usize) {
+        if let Ok(h) = MachObject::parse(self.reader.clone(), u64::from(self.offset)) {
             s.field("mach_header()", &h);
         }
 

@@ -1,6 +1,6 @@
 use super::common;
-use super::common::ObjectFilter;
 use super::common::options::AddToOptions;
+use super::common::ObjectFilter;
 use super::handler;
 use super::handler::*;
 use super::Printer;
@@ -48,7 +48,12 @@ impl Handler for SegsHandler {
         let out_arch = objects.len() > 1;
         for (idx, obj) in objects.iter().enumerate() {
             if out_arch {
-                common::out_single_arch_title(&self.printer, &obj.header(), idx, config.format.short);
+                common::out_single_arch_title(
+                    &self.printer,
+                    &obj.header(),
+                    idx,
+                    config.format.short,
+                );
             }
             self.handle_load_commands(obj.load_commands_iterator(), &config);
         }
@@ -99,7 +104,7 @@ impl SegsHandler {
             };
             seg_printer.print();
         }
-        
+
         if config.show_sects {
             for section in seg.sections_iterator() {
                 let sect_printer = SectionPrinter {
@@ -135,7 +140,8 @@ impl<'a> SegmentPrinter<'a> {
             self.printer.out_list_item_dash(0, self.index);
         }
         if self.short {
-            self.printer.print_line(&self.segment.segname.to_string().yellow());
+            self.printer
+                .print_line(&self.segment.segname.to_string().yellow());
         } else {
             self.printer
                 .print_colored_string("Segment (".bright_white());
@@ -173,10 +179,13 @@ impl<'a> SectionPrinter<'a> {
         }
 
         if self.short {
-            self.printer.print_line(vec![
-                self.section.segname.to_string().yellow().to_string(),
-                self.section.sectname.to_string().yellow().to_string(),
-            ].join(" "));
+            self.printer.print_line(
+                vec![
+                    self.section.segname.to_string().yellow().to_string(),
+                    self.section.sectname.to_string().yellow().to_string(),
+                ]
+                .join(" "),
+            );
         } else {
             self.printer.print_string(format!(
                 "{} {} {}{}\n",

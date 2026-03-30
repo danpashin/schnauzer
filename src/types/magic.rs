@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Copy, Clone)]
 pub enum Magic {
     Fat,
     FatReverse,
@@ -11,59 +11,55 @@ pub enum Magic {
 }
 
 impl Magic {
-    pub fn raw_value(&self) -> u32 {
+    #[must_use]
+    pub fn raw_value(self) -> u32 {
         match self {
-            Magic::Fat => 0xcafebabe,
-            Magic::FatReverse => 0xbebafeca,
-            Magic::Bin32 => 0xfeedface,
-            Magic::Bin32Reverse => 0xcefaedfe,
-            Magic::Bin64 => 0xfeedfacf,
-            Magic::Bin64Reverse => 0xcffaedfe,
+            Magic::Fat => 0xcafe_babe,
+            Magic::FatReverse => 0xbeba_feca,
+            Magic::Bin32 => 0xfeed_face,
+            Magic::Bin32Reverse => 0xcefa_edfe,
+            Magic::Bin64 => 0xfeed_facf,
+            Magic::Bin64Reverse => 0xcffa_edfe,
         }
     }
 
-    pub fn is_fat(&self) -> bool {
-        match self {
-            Self::Fat | Self::FatReverse => true,
-            _ => false,
-        }
+    #[must_use]
+    pub fn is_fat(self) -> bool {
+        matches!(self, Self::Fat | Self::FatReverse)
     }
 
-    pub fn is_reverse(&self) -> bool {
-        match self {
-            Magic::FatReverse => true,
-            Magic::Bin32Reverse => true,
-            Magic::Bin64Reverse => true,
-            _ => false,
-        }
+    #[must_use]
+    pub fn is_reverse(self) -> bool {
+        matches!(
+            self,
+            Magic::FatReverse | Magic::Bin32Reverse | Magic::Bin64Reverse
+        )
     }
 
-    pub fn is_64(&self) -> bool {
-        match self {
-            Self::Bin64 | Self::Bin64Reverse => true,
-            _ => false,
-        }
+    #[must_use]
+    pub fn is_64(self) -> bool {
+        matches!(self, Self::Bin64 | Self::Bin64Reverse)
     }
 }
 
 impl TryInto<Magic> for u32 {
     type Error = crate::result::Error;
 
-    fn try_into(self) -> std::result::Result<Magic, Self::Error> {
+    fn try_into(self) -> Result<Magic, Self::Error> {
         match self {
-            0xcafebabe => Ok(Magic::Fat),
-            0xbebafeca => Ok(Magic::FatReverse),
-            0xfeedface => Ok(Magic::Bin32),
-            0xcefaedfe => Ok(Magic::Bin32Reverse),
-            0xfeedfacf => Ok(Magic::Bin64),
-            0xcffaedfe => Ok(Magic::Bin64Reverse),
+            0xcafe_babe => Ok(Magic::Fat),
+            0xbeba_feca => Ok(Magic::FatReverse),
+            0xfeed_face => Ok(Magic::Bin32),
+            0xcefa_edfe => Ok(Magic::Bin32Reverse),
+            0xfeed_facf => Ok(Magic::Bin64),
+            0xcffa_edfe => Ok(Magic::Bin64Reverse),
             _ => Err(Self::Error::BadMagic(self)),
         }
     }
 }
 
 impl Magic {
-    pub(super) fn endian(&self) -> scroll::Endian {
+    pub(super) fn endian(self) -> scroll::Endian {
         if self.is_fat() || !self.is_reverse() {
             scroll::BE
         } else {
@@ -71,21 +67,6 @@ impl Magic {
         }
     }
 }
-
-impl Clone for Magic {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Fat => Self::Fat,
-            Self::FatReverse => Self::FatReverse,
-            Self::Bin32 => Self::Bin32,
-            Self::Bin32Reverse => Self::Bin32Reverse,
-            Self::Bin64 => Self::Bin64,
-            Self::Bin64Reverse => Self::Bin64Reverse,
-        }
-    }
-}
-
-impl Copy for Magic {}
 
 impl Display for Magic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

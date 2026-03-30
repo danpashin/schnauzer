@@ -16,11 +16,11 @@ type NlistStr = LcStr;
 #[repr(C)]
 pub struct Nlist {
     /// In the original `nlist` struct this field is uniun - `n_un`
-    /// A union that holds an index into the string table, n_strx. To specify an empty string (""),
-    /// set this value to 0. The n_name field is not used in Mach-O files.
+    /// A union that holds an index into the string table, `n_strx`. To specify an empty string (""),
+    /// set this value to 0. The `n_name` field is not used in Mach-O files.
     pub n_strx: u32,
 
-    /// See `Ntype`
+    /// See [`Ntype`]
     pub n_type: Ntype,
 
     ///
@@ -51,14 +51,14 @@ pub struct Nlist {
     /// Additionally, the following bits might also be set:
     ///
     /// [`REFERENCED_DYNAMICALLY`] (0x10) — Must be set for any defined symbol that is referenced by dynamic-loader
-    /// APIs (such as dlsym and NSLookupSymbolInImage) and not ordinary undefined symbol references.
+    /// APIs (such as dlsym and `NSLookupSymbolInImage`) and not ordinary undefined symbol references.
     /// The strip tool uses this bit to avoid removing symbols that must exist: If the symbol has this bit set,
     /// strip does not strip it.
     ///
     /// [`N_DESC_DISCARDED`] (0x20) — Sometimes used by the dynamic linker at runtime in a fully linked image.
     /// Do not set this bit in a fully linked image.
     ///
-    /// [`N_NO_DEAD_STRIP`] (0x20) — When set in a relocatable object file (file type MH_OBJECT) on a defined symbol,
+    /// [`N_NO_DEAD_STRIP`] (0x20) — When set in a relocatable object file (file type `MH_OBJECT`) on a defined symbol,
     /// indicates to the static linker to never dead-strip the symbol. (Note that the same bit (0x20) is used for two nonoverlapping purposes.)
     ///
     /// [`N_WEAK_REF`] (0x40) — Indicates that this undefined symbol is a weak reference.
@@ -69,8 +69,8 @@ pub struct Nlist {
     /// linker finds another (non-weak) definition for this symbol, the weak definition is ignored.
     /// Only symbols in a coalesced section can be marked as a weak definition.
     ///
-    /// If this file is a two-level namespace image (that is, if the MH_TWOLEVEL flag of the mach_header
-    /// structure is set), the high 8 bits of n_desc specify the number of the library in which
+    /// If this file is a two-level namespace image (that is, if the `MH_TWOLEVEL` flag of the mach header
+    /// structure is set), the high 8 bits of `n_desc` specify the number of the library in which
     /// this undefined symbol is defined. Use the macro `GET_LIBRARY_ORDINAL` to obtain this value and
     /// the macro `SET_LIBRARY_ORDINAL` to set it. Zero specifies the current image. 1 through 253 specify
     /// the library number according to the order of [`LC_LOAD_DYLIB`] commands in the file. The value 254 is used
@@ -80,16 +80,16 @@ pub struct Nlist {
     pub n_desc: u16,
 
     /// An integer that contains the value of the symbol. The format of this value is different for
-    ///  each type of symbol table entry (as specified by the n_type field).
-    /// For the `N_SECT` symbol type, `n_value` is the address of the symbol. See the description of the n_type
+    ///  each type of symbol table entry (as specified by the `n_type` field).
+    /// For the `N_SECT` symbol type, `n_value` is the address of the symbol. See the description of the `n_type`
     /// field for information on other possible values.
     ///
     /// ### Discussion
     ///
-    /// Common symbols must be of type [N_UNDF] and must have the [N_EXT] bit set.
-    /// The n_value for a common symbol is the size (in bytes) of the data of the symbol.
+    /// Common symbols must be of type [`N_UNDF`] and must have the [`N_EXT`] bit set.
+    /// The `n_value` for a common symbol is the size (in bytes) of the data of the symbol.
     /// In C, a common symbol is a variable that is declared but not initialized in this file.
-    /// Common symbols can appear only in MH_OBJECT Mach-O files.
+    /// Common symbols can appear only in `MH_OBJECT` Mach-O files.
     pub n_value: Hu64,
 
     /// Depends on `n_strx`, `stroff` of [`LcSymtab`] (and image offset in file if that in fat file)
@@ -119,7 +119,7 @@ impl Nlist {
         let name: Option<LcStr> = if n_strx > 0 {
             Some(NlistStr {
                 reader,
-                file_offset: stroff as u32 + n_strx,
+                file_offset: stroff + u64::from(n_strx),
             })
         } else {
             None
@@ -150,70 +150,70 @@ pub mod constants {
 
     /// Symbolic debugger symbols.  The comments give the conventional use for
     ///
-    ///.stabs "n_name", n_type, n_sect, n_desc, n_value
+    ///.stabs `n_name`, `n_type`, `n_sect`, `n_desc`, `n_value`
     ///
-    ///where n_type is the defined constant and not listed in the comment.  Other
-    ///fields not listed are zero. n_sect is the section ordinal the entry is
+    ///where `n_type` is the defined constant and not listed in the comment.  Other
+    ///fields not listed are zero. `n_sect` is the section ordinal the entry is
     ///refering to.
     ///
     pub mod stab {
-        /// global symbol: name,,NO_SECT,type,0
+        /// global symbol: `name,,NO_SECT,type,0`
         pub const N_GSYM: u8 = 0x20;
-        /// procedure name (f77 kludge): name,,NO_SECT,0,0
+        /// procedure name (f77 kludge): `name,,NO_SECT,0,0`
         pub const N_FNAME: u8 = 0x22;
-        /// procedure: name,,n_sect,linenumber,address
+        /// procedure: `name,,n_sect,linenumber,address`
         pub const N_FUN: u8 = 0x24;
-        /// static symbol: name,,n_sect,type,address
+        /// static symbol: `name,,n_sect,type,address`
         pub const N_STSYM: u8 = 0x26;
-        /// .lcomm symbol: name,,n_sect,type,address
+        /// .lcomm symbol: `name,,n_sect,type,address`
         pub const N_LCSYM: u8 = 0x28;
-        /// begin nsect sym: 0,,n_sect,0,address
+        /// begin nsect sym: `0,,n_sect,0,address`
         pub const N_BNSYM: u8 = 0x2e;
-        /// AST file path: name,,NO_SECT,0,0
+        /// AST file path: `name,,NO_SECT,0,0`
         pub const N_AST: u8 = 0x32;
-        /// emitted with gcc2_compiled and in gcc source
+        /// emitted with gcc2 compiled and in gcc source
         pub const N_OPT: u8 = 0x3c;
-        /// register sym: name,,NO_SECT,type,register
+        /// register sym: `name,,NO_SECT,type,register`
         pub const N_RSYM: u8 = 0x40;
-        /// src line: 0,,n_sect,linenumber,address
+        /// src line: `0,,n_sect,linenumber,address`
         pub const N_SLINE: u8 = 0x44;
-        /// end nsect sym: 0,,n_sect,0,address
+        /// end nsect sym: `0,,n_sect,0,address`
         pub const N_ENSYM: u8 = 0x4e;
-        /// structure elt: name,,NO_SECT,type,struct_offset
+        /// structure elt: `name,,NO_SECT,type,struct_offset`
         pub const N_SSYM: u8 = 0x60;
-        /// source file name: name,,n_sect,0,address
+        /// source file name: `name,,n_sect,0,address`
         pub const N_SO: u8 = 0x64;
-        /// object file name: name,,0,0,st_mtime
+        /// object file name: `name,,0,0,st_mtime`
         pub const N_OSO: u8 = 0x66;
-        /// local sym: name,,NO_SECT,type,offset
+        /// local sym: `name,,NO_SECT,type,offset`
         pub const N_LSYM: u8 = 0x80;
-        /// include file beginning: name,,NO_SECT,0,sum
+        /// include file beginning: `name,,NO_SECT,0,sum`
         pub const N_BINCL: u8 = 0x82;
-        /// included file name: name,,n_sect,0,address
+        /// included file name: `name,,n_sect,0,address`
         pub const N_SOL: u8 = 0x84;
-        /// compiler parameters: name,,NO_SECT,0,0
+        /// compiler parameters: `name,,NO_SECT,0,0`
         pub const N_PARAMS: u8 = 0x86;
-        /// compiler version: name,,NO_SECT,0,0
+        /// compiler version: `name,,NO_SECT,0,0`
         pub const N_VERSION: u8 = 0x88;
-        /// compiler -O level: name,,NO_SECT,0,0
+        /// compiler -O level: `name,,NO_SECT,0,0`
         pub const N_OLEVEL: u8 = 0x8A;
-        /// parameter: name,,NO_SECT,type,offset
+        /// parameter: `name,,NO_SECT,type,offset`
         pub const N_PSYM: u8 = 0xa0;
-        /// include file end: name,,NO_SECT,0,0
+        /// include file end: `name,,NO_SECT,0,0`
         pub const N_EINCL: u8 = 0xa2;
-        /// alternate entry: name,,n_sect,linenumber,address
+        /// alternate entry: `name,,n_sect,linenumber,address`
         pub const N_ENTRY: u8 = 0xa4;
-        /// left bracket: 0,,NO_SECT,nesting level,address
+        /// left bracket: `0,,NO_SECT,nesting level,address`
         pub const N_LBRAC: u8 = 0xc0;
-        /// deleted include file: name,,NO_SECT,0,sum
+        /// deleted include file: `name,,NO_SECT,0,sum`
         pub const N_EXCL: u8 = 0xc2;
-        /// right bracket: 0,,NO_SECT,nesting level,address
+        /// right bracket: `0,,NO_SECT,nesting level,address`
         pub const N_RBRAC: u8 = 0xe0;
-        /// begin common: name,,NO_SECT,0,0
+        /// begin common: `name,,NO_SECT,0,0`
         pub const N_BCOMM: u8 = 0xe2;
-        /// end common: name,,n_sect,0,0
+        /// end common: `name,,n_sect,0,0`
         pub const N_ECOMM: u8 = 0xe4;
-        /// end common (local name): 0,,n_sect,0,address
+        /// end common (local name): `0,,n_sect,0,address`
         pub const N_ECOML: u8 = 0xe8;
         /// second stab entry with length information
         pub const N_LENG: u8 = 0xfe;
@@ -221,13 +221,13 @@ pub mod constants {
 }
 
 /// A byte value consisting of data accessed using four bit masks:
-/// `N_STAB` (0xe0) — If any of these 3 bits are set, the symbol is a symbolic debugging table (stab) entry.
-/// In that case, the entire n_type field is interpreted as a stabvalue.
+/// [`N_STAB`] (0xe0) — If any of these 3 bits are set, the symbol is a symbolic debugging table (stab) entry.
+/// In that case, the entire `n_type` field is interpreted as a stabvalue.
 /// See `/usr/include/mach-o/stab.h` for valid stab values.
 ///
 /// [`N_PEXT`] (0x10) — If this bit is on, this symbol is marked as having limited global scope.
-/// When the file is fed to the static linker, it clears the N_EXT bit for
-/// each symbol with the `N_PEXT` bit set. (The ld option -keep_private_externs turns off this behavior.)
+/// When the file is fed to the static linker, it clears the [`N_EXT`] bit for
+/// each symbol with the `N_PEXT` bit set. (The ld option `-keep_private_externs` turns off this behavior.)
 /// With OS X GCC, you can use the `__private_extern__` function attribute to set this bit.
 ///
 /// [`N_TYPE`] (0x0e) — These bits define the type of the symbol.
@@ -235,81 +235,84 @@ pub mod constants {
 /// [`N_EXT`] (0x01) — If this bit is on, this symbol is an external symbol, a symbol that is either
 /// defined outside this file or that is defined in this file but can be referenced by other files.
 ///
-/// Values for the N_TYPE field include:
+/// Values for the [`N_TYPE`] field include:
 ///
 /// [`N_UNDF`] (0x0) — The symbol is undefined. Undefined symbols are symbols referenced in this
-/// module but defined in a different module. The n_sect field is set to NO_SECT.
+/// module but defined in a different module. The `n_sect` field is set to `NO_SECT`.
 ///
 /// [`N_ABS`] (0x2) — The symbol is absolute. The linker does not change the value of an absolute symbol.
-/// The n_sect field is set to NO_SECT.
+/// The `n_sect` field is set to `NO_SECT`.
 ///
-/// [`N_SECT`] (0xe) — The symbol is defined in the section number given in n_sect.
+/// [`N_SECT`] (0xe) — The symbol is defined in the section number given in `n_sect`.
 ///
 /// [`N_PBUD`] (0xc) — The symbol is undefined and the image is using a prebound value for the symbol.
-/// The n_sect field is set to NO_SECT.
+/// The `n_sect` field is set to `NO_SECT`.
 ///
 /// [`N_INDR`] (0xa) — The symbol is defined to be the same as another symbol.
-/// The n_value field is an index into the string table specifying the name of the other symbol.
+/// The `n_value` field is an index into the string table specifying the name of the other symbol.
 /// When that symbol is linked, both this and the other symbol have the same defined type and value.
-#[derive(IOread, SizeWith)]
+#[derive(IOread, SizeWith, Copy, Clone)]
 pub struct Ntype(pub u8);
 
 use self::constants::*;
 use constants::stab::*;
 
 impl Ntype {
-    pub fn stab_type(&self) -> Option<StabType> {
+    #[must_use]
+    pub fn stab_type(self) -> Option<StabType> {
         StabType::from_raw(self.0)
     }
 
-    pub fn is_stab(&self) -> bool {
+    #[must_use]
+    pub fn is_stab(self) -> bool {
         self.0 & N_STAB > 0
     }
 
-    pub fn is_private_external(&self) -> bool {
+    #[must_use]
+    pub fn is_private_external(self) -> bool {
         self.0 & N_PEXT > 0
     }
 
-    pub fn is_external(&self) -> bool {
+    #[must_use]
+    pub fn is_external(self) -> bool {
         self.0 & N_EXT > 0
     }
 
-    pub fn is_undefined(&self) -> bool {
+    #[must_use]
+    pub fn is_undefined(self) -> bool {
         self.0 & N_TYPE == N_UNDF
     }
 
-    pub fn is_absolute(&self) -> bool {
+    #[must_use]
+    pub fn is_absolute(self) -> bool {
         self.0 & N_TYPE == N_ABS
     }
 
-    pub fn is_defined_in_n_sect(&self) -> bool {
+    #[must_use]
+    pub fn is_defined_in_n_sect(self) -> bool {
         self.0 & N_TYPE == N_SECT
     }
 
-    pub fn is_prebound(&self) -> bool {
+    #[must_use]
+    pub fn is_prebound(self) -> bool {
         self.0 & N_TYPE == N_PBUD
     }
 
-    /// If `true`, the n_value field is an index into the string table specifying the name of the other symbol.
-    pub fn is_indirect(&self) -> bool {
+    /// If `true`, the `n_value` field is an index into the string table specifying the name of the other symbol.
+    #[must_use]
+    pub fn is_indirect(self) -> bool {
         self.0 & N_TYPE == N_INDR
     }
 }
 
 impl Ntype {
-    pub fn options(&self) -> SymbolOptions {
+    #[must_use]
+    pub fn options(self) -> SymbolOptions {
         if let Some(stab) = self.stab_type() {
             return stab.options();
         }
 
-        if self.is_undefined() {
-            SymbolOptions {
-                n_name: NnameOption::Some,
-                n_sect: NsectOption::None,
-                n_desc: NdescOption::Raw,
-                n_value: NvalueOption::Raw,
-            }
-        } else if self.is_absolute() {
+        if self.is_undefined() || self.is_absolute() || self.is_prebound() {
             SymbolOptions {
                 n_name: NnameOption::Some,
                 n_sect: NsectOption::None,
@@ -323,13 +326,6 @@ impl Ntype {
                 n_desc: NdescOption::Raw,
                 n_value: NvalueOption::Address,
             }
-        } else if self.is_prebound() {
-            SymbolOptions {
-                n_name: NnameOption::Some,
-                n_sect: NsectOption::None,
-                n_desc: NdescOption::Raw,
-                n_value: NvalueOption::Raw,
-            }
         } else {
             SymbolOptions {
                 n_name: NnameOption::Raw,
@@ -341,7 +337,7 @@ impl Ntype {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum StabType {
     /// `N_GSYM`
     GlobalSymbol,
@@ -447,7 +443,9 @@ impl StabType {
 }
 
 impl StabType {
-    pub fn options(&self) -> SymbolOptions {
+    #[must_use]
+    pub fn options(self) -> SymbolOptions {
+        #[allow(clippy::match_same_arms)]
         match self {
             // global symbol: name,,NO_SECT,type,0
             StabType::GlobalSymbol => SymbolOptions {
@@ -663,7 +661,7 @@ impl StabType {
     }
 }
 
-/// .stabs "n_name", n_type (always constant), n_sect, n_desc, n_value
+/// .stabs `n_name`, `n_type` (always constant), `n_sect`, `n_desc`, `n_value`
 pub struct SymbolOptions {
     pub n_name: NnameOption,
     pub n_sect: NsectOption,

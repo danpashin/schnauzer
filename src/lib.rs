@@ -2,12 +2,14 @@
 //!
 //! #References
 //!
+#![warn(clippy::pedantic)]
+#![allow(clippy::missing_errors_doc, clippy::wildcard_imports)]
 
-pub mod result;
-pub mod types;
+pub mod auto_enum_fields;
 pub mod constants;
 pub mod fmt_ext;
-pub mod auto_enum_fields;
+pub mod result;
+pub mod types;
 
 #[cfg(feature = "cli")]
 pub mod output;
@@ -20,8 +22,8 @@ mod reader;
 use std::path::Path;
 
 use self::result::Result;
-pub use types::*;
 use reader::Reader;
+pub use types::*;
 
 /// Topmost struct in the library.
 /// Reads file in lazy manner (doesn't load all contents to memory).
@@ -31,7 +33,7 @@ pub struct Parser {
 
 impl Parser {
     /// Provide a valid path to binary, library, object file, e.t.c..
-    /// Full list of mach-o files you can find there - [filetype_constants].
+    /// Full list of mach-o files you can find there - [`filetype_constants`].
     /// For example: `/bin/cat`.
     pub fn with_file(path: &Path) -> Result<Parser> {
         let file = std::fs::File::open(path)?;
@@ -39,7 +41,7 @@ impl Parser {
         Ok(Parser { reader })
     }
 
-    /// Returns appropriate object - [FatObject] or [MachObject]
+    /// Returns appropriate object - [`FatObject`] or [`MachObject`]
     pub fn parse(self) -> Result<ObjectType> {
         ObjectType::parse(self.reader.clone())
     }
@@ -68,7 +70,10 @@ mod tests {
         let first = format!("{:#?}", obj);
         let second = format!("{:#?}", obj);
 
-        assert_eq!(first, second, "Somewhere invalid offset used while parsing!");
+        assert_eq!(
+            first, second,
+            "Somewhere invalid offset used while parsing!"
+        );
     }
 
     #[test]
@@ -119,7 +124,10 @@ mod tests {
 
         for arch in fat_header.arch_iterator() {
             assert_eq!(arch.cputype.0, arch.object().unwrap().header().cputype.0);
-            assert_eq!(arch.cpusubtype.0, arch.object().unwrap().header().cpusubtype.0);
+            assert_eq!(
+                arch.cpusubtype.0,
+                arch.object().unwrap().header().cpusubtype.0
+            );
         }
     }
 }

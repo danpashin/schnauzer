@@ -1,12 +1,12 @@
 use getopts::*;
 
+use super::common::options::*;
 use super::common::*;
 use super::handler::*;
 use super::Printer;
 use super::Result;
 use crate::auto_enum_fields::Field;
 use crate::*;
-use super::common::options::*;
 
 static SUBCOMM_NAME: &str = "fat";
 

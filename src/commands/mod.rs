@@ -1,14 +1,14 @@
+mod data;
 mod default;
 mod dylibs;
 mod fat;
 mod handler;
 mod headers;
+mod lc;
+mod rel;
 mod rpaths;
 mod segs;
 mod syms;
-mod rel;
-mod lc;
-mod data;
 
 mod common;
 
@@ -19,18 +19,18 @@ use super::output::Printer;
 use super::result::*;
 
 use colored::Colorize;
+use data::*;
 use default::*;
 use dylibs::*;
 use fat::*;
 use getopts::Options;
 use handler::*;
 use headers::*;
+use lc::*;
+use rel::*;
 use rpaths::*;
 use segs::*;
 use syms::*;
-use rel::*;
-use lc::*;
-use data::*;
 
 use std::process::exit;
 
@@ -43,7 +43,11 @@ pub fn handle_with_args() -> Result<()> {
 
     let handler = matched_handler(&args[1]);
     let (command_name, description, mut option_items) = match &handler {
-        Some(h) => (Some(h.command_name()), h.description(), h.accepted_option_items()),
+        Some(h) => (
+            Some(h.command_name()),
+            h.description(),
+            h.accepted_option_items(),
+        ),
         None => (None, "".to_string(), handler::default_option_items()),
     };
 
@@ -51,7 +55,11 @@ pub fn handle_with_args() -> Result<()> {
     option_items.add_to_opts(&mut opts);
 
     let help_request = match command_name {
-        Some(command_name) => Some(HelpStringRequest(command_name.clone(), description, &mut option_items)),
+        Some(command_name) => Some(HelpStringRequest(
+            command_name.clone(),
+            description,
+            &mut option_items,
+        )),
         None => None,
     };
 
@@ -115,10 +123,9 @@ struct HelpStringRequest<'a>(String, String, &'a mut Vec<OptionItem>);
 fn help_string(request: Option<HelpStringRequest>) -> String {
     match request {
         Some(request) => {
-            let mut help_string_builder =
-                HelpStringBuilder::new(request.0.clone());
-                help_string_builder.description = Some(request.1);
-                help_string_builder.show_usage_title = true;
+            let mut help_string_builder = HelpStringBuilder::new(request.0.clone());
+            help_string_builder.description = Some(request.1);
+            help_string_builder.show_usage_title = true;
             help_string_builder.add_option_items(request.2);
             help_string_builder.build_string()
         }

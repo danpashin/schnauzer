@@ -15,7 +15,7 @@ pub use object_flags::*;
 pub mod machine;
 pub use machine::*;
 
-/// Represents vm_prot_t
+/// Represents `vm_prot_t`
 pub type VmProt = Hi32;
 
 pub type LoadCommandType = u32;
@@ -125,7 +125,7 @@ macro_rules! hex_display {
 }
 
 #[repr(transparent)]
-#[derive(Clone, IOread, SizeWith)]
+#[derive(Copy, Clone, IOread, SizeWith)]
 pub struct Hu32(pub u32);
 hex_display!(Hu32, 10);
 
@@ -148,7 +148,7 @@ hex_display!(Hu32, 10);
 // }
 
 #[repr(transparent)]
-#[derive(IOread, SizeWith)]
+#[derive(IOread, SizeWith, Copy, Clone)]
 pub struct Hu32w4(pub u32);
 
 impl Debug for Hu32w4 {
@@ -170,12 +170,12 @@ impl Display for Hu32w4 {
 }
 
 #[repr(transparent)]
-#[derive(IOread, SizeWith)]
+#[derive(IOread, SizeWith, Copy, Clone)]
 pub struct Hi32(pub i32);
 hex_display!(Hi32, 10);
 
 #[repr(transparent)]
-#[derive(IOread, SizeWith)]
+#[derive(IOread, SizeWith, Copy, Clone)]
 pub struct Hu64(pub u64);
 from_ctx_64_tuple_struct!(Hu64, u64, u32);
 hex_display!(Hu64, 18);
@@ -207,22 +207,25 @@ impl Display for Segname {
 }
 
 #[repr(transparent)]
-#[derive(IOread, SizeWith)]
+#[derive(IOread, SizeWith, Copy, Clone)]
 pub struct Version32(pub u32);
 
 impl Version32 {
-    pub fn x(&self) -> u32 {
-        const MASK: u32 = 0xFFFF0000;
+    #[must_use]
+    pub fn x(self) -> u32 {
+        const MASK: u32 = 0xFFFF_0000;
         (self.0 & MASK) >> 16
     }
 
-    pub fn y(&self) -> u32 {
-        const MASK: u32 = 0x0000FF00;
+    #[must_use]
+    pub fn y(self) -> u32 {
+        const MASK: u32 = 0x0000_FF00;
         (self.0 & MASK) >> 8
     }
 
-    pub fn z(&self) -> u32 {
-        const MASK: u32 = 0x000000FF;
+    #[must_use]
+    pub fn z(self) -> u32 {
+        const MASK: u32 = 0x0000_00FF;
         self.0 & MASK
     }
 }
@@ -240,27 +243,36 @@ impl Display for Version32 {
 }
 
 #[repr(transparent)]
-#[derive(IOread, SizeWith)]
+#[derive(IOread, SizeWith, Copy, Clone)]
 pub struct Version64(pub u64);
 
 impl Version64 {
-    pub fn a(&self) -> u64 {
-        const MASK: u64 = 0xFFFFFF0000000000;
+    #[must_use]
+    pub fn a(self) -> u64 {
+        const MASK: u64 = 0xFFFF_FF00_0000_0000;
         (self.0 & MASK) >> 40
     }
-    pub fn b(&self) -> u64 {
-        const MASK: u64 = 0xFFC0000000;
+
+    #[must_use]
+    pub fn b(self) -> u64 {
+        const MASK: u64 = 0x00FF_C000_0000;
         (self.0 & MASK) >> 30
     }
-    pub fn c(&self) -> u64 {
-        const MASK: u64 = 0x3FF00000;
+
+    #[must_use]
+    pub fn c(self) -> u64 {
+        const MASK: u64 = 0x3FF0_0000;
         (self.0 & MASK) >> 20
     }
-    pub fn d(&self) -> u64 {
+
+    #[must_use]
+    pub fn d(self) -> u64 {
         const MASK: u64 = 0xFFC00;
         (self.0 & MASK) >> 10
     }
-    pub fn e(&self) -> u64 {
+
+    #[must_use]
+    pub fn e(self) -> u64 {
         const MASK: u64 = 0x3FF;
         self.0 & MASK
     }
@@ -310,27 +322,23 @@ impl Display for Str16Bytes {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum X64Context {
     On(Endian),
     Off(Endian),
 }
 
-impl Copy for X64Context {}
-
 impl X64Context {
+    #[must_use]
     pub fn endian(&self) -> &Endian {
         match self {
-            X64Context::On(e) => e,
-            X64Context::Off(e) => e,
+            X64Context::On(e) | X64Context::Off(e) => e,
         }
     }
 
+    #[must_use]
     pub fn is_64(&self) -> bool {
-        match self {
-            X64Context::On(_) => true,
-            X64Context::Off(_) => false,
-        }
+        matches!(self, X64Context::On(_))
     }
 }
 
@@ -348,7 +356,7 @@ num_display!(u32opt);
 mod test {
     use super::*;
     use scroll::IOread;
-    use std::io::{Cursor};
+    use std::io::Cursor;
 
     #[test]
     fn u64_ctx_u32opt_test() {
@@ -386,7 +394,7 @@ mod test {
         assert_eq!(cur.position(), 0, "Invalid position after read.\n Note: Values that optional to read should not read and affect stream.\n Context: {:?}", ctx);
         assert_eq!(opt_32.0, 0, "Context: {:?}", ctx);
     }
-    
+
     #[test]
     fn u64_ctx_u64_io_test() {
         u64_ctx_u64_io_endian(Endian::Big);

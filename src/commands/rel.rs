@@ -86,19 +86,31 @@ impl RelHandler {
                 format!(" ({} entries)", section.nreloc.to_string().blue()).bright_white(),
             );
 
-            line.print_line(["address", "pcrel", "length", "extern", "type", "scattered", "symbolnum/value"], vec![Color::White]);
-            for reloc in section.relocations_iterator() {
-                line.print_line([
-                    format!("{:08x}", reloc.r_address),
-                    reloc.r_pcrel().to_string(),
-                    reloc.r_length().to_string(),
-                    reloc.r_extern().to_string(),
-                    reloc.r_type().to_string(),
-                    reloc.is_scattered().to_string(),
-                    reloc.r_symbolnum().to_string(),
+            line.print_line(
+                [
+                    "address",
+                    "pcrel",
+                    "length",
+                    "extern",
+                    "type",
+                    "scattered",
+                    "symbolnum/value",
                 ],
-                vec![Color::Red, Color::Yellow]
+                vec![Color::White],
             );
+            for reloc in section.relocations_iterator() {
+                line.print_line(
+                    [
+                        format!("{:08x}", reloc.r_address),
+                        reloc.r_pcrel().to_string(),
+                        reloc.r_length().to_string(),
+                        reloc.r_extern().to_string(),
+                        reloc.r_type().to_string(),
+                        reloc.is_scattered().to_string(),
+                        reloc.r_symbolnum().to_string(),
+                    ],
+                    vec![Color::Red, Color::Yellow],
+                );
             }
         }
     }

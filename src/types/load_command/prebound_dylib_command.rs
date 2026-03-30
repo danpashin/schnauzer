@@ -1,7 +1,7 @@
 use crate::Reader;
 use crate::Result;
 
-use scroll::{IOread};
+use scroll::IOread;
 
 use std::fmt::Debug;
 use std::io::{Seek, SeekFrom};
@@ -9,8 +9,8 @@ use std::io::{Seek, SeekFrom};
 use crate::auto_enum_fields::*;
 use schnauzer_derive::AutoEnumFields;
 
-use super::LcStr;
 use super::BitVec;
+use super::LcStr;
 
 /// `prebound_dylib_command`
 #[repr(C)]
@@ -24,18 +24,18 @@ pub struct LcPreboundDylib {
 impl LcPreboundDylib {
     pub(super) fn parse(
         mut reader: Reader,
-        command_offset: usize,
-        base_offset: usize,
+        command_offset: u64,
+        base_offset: u64,
         endian: scroll::Endian,
     ) -> Result<Self> {
-        reader.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset))?;
 
         let name_offset: u32 = reader.ioread_with(endian)?;
         let nmodules: u32 = reader.ioread_with(endian)?;
         let linked_modules_offset: u32 = reader.ioread_with(endian)?;
 
-        let name_offset = name_offset + command_offset as u32;
-        let linked_modules_offset = linked_modules_offset + command_offset as u32;
+        let name_offset = command_offset + u64::from(name_offset);
+        let linked_modules_offset = command_offset + u64::from(linked_modules_offset);
 
         let name = LcStr {
             reader: reader.clone(),

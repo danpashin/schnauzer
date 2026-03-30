@@ -1,6 +1,6 @@
 use getopts::Options;
 
-use crate::{commands::common::{options::*}, result::Error};
+use crate::{commands::common::options::*, result::Error};
 
 const COMMON_ERROR: &str = "Unable to obtain section";
 
@@ -25,12 +25,10 @@ impl Config {
         };
 
         match Self::search_after_sect_opt(args) {
-            Ok((seg, sect)) => {
-                Ok(Self {
-                    seg: seg.clone(),
-                    sect: sect.clone(),
-                })
-            },
+            Ok((seg, sect)) => Ok(Self {
+                seg: seg.clone(),
+                sect: sect.clone(),
+            }),
             Err(e) => Err(e),
         }
     }
@@ -51,7 +49,7 @@ impl Config {
 
     fn search_names_at(args: &[String], pos: usize) -> crate::result::Result<(&String, &String)> {
         const ERROR_STR: &str = "Incorrect name pattern. Provide \"segname sectname\"";
-        let strs = args.get(pos..=pos+1);
+        let strs = args.get(pos..=pos + 1);
         match strs {
             Some(strs) => {
                 let filtered: Vec<&String> = strs.iter().filter(|s| !s.starts_with("-")).collect();
@@ -60,7 +58,7 @@ impl Config {
                 } else {
                     return Err(Error::Text(ERROR_STR.to_string()));
                 }
-            },
+            }
             None => Err(Error::Text(ERROR_STR.to_string())),
         }
     }
@@ -68,14 +66,12 @@ impl Config {
 
 impl Config {
     fn required_option_items() -> Vec<OptionItem> {
-        vec![
-            OptionItem {
-                option_type: OptionType::Arg(IsRequired(true)),
-                name: OptionName::ShortLong(SECT_FLAG_SHORT.to_string(), SECT_FLAG_LONG.to_string()),
-                description: "Section to display".to_string(),
-                hint: "segname sectname".to_string(),
-            },
-        ]
+        vec![OptionItem {
+            option_type: OptionType::Arg(IsRequired(true)),
+            name: OptionName::ShortLong(SECT_FLAG_SHORT.to_string(), SECT_FLAG_LONG.to_string()),
+            description: "Section to display".to_string(),
+            hint: "segname sectname".to_string(),
+        }]
     }
 
     pub(super) fn option_items() -> Vec<OptionItem> {

@@ -1,21 +1,16 @@
+use super::{auto_enum_fields::*, fmt_ext::*, Reader, Result, Section};
 use crate::X64Context;
-
-use super::fmt_ext::*;
-use super::Section;
-use super::Reader;
-use super::Result;
-use scroll::{Endian, IOread};
-
-use std::fmt::Debug;
-use std::io::{Seek, SeekFrom};
-
-use super::auto_enum_fields::*;
 use schnauzer_derive::AutoEnumFields;
+use scroll::{Endian, IOread};
+use std::{
+    fmt::Debug,
+    io::{Seek, SeekFrom},
+};
 
-pub mod constants;
+mod constants;
 pub use constants::*;
 
-pub mod common;
+mod common;
 pub use common::*;
 
 pub mod segment_command;
@@ -121,20 +116,20 @@ impl Debug for LoadCommand {
 impl LoadCommand {
     pub(super) fn parse(
         mut reader: Reader,
-        base_offset: usize,
+        base_offset: u64,
         endian: scroll::Endian,
         is_64: bool,
         object_file_offset: u64,
     ) -> Result<LoadCommand> {
-        reader.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset))?;
 
         let cmd: u32 = reader.ioread_with(endian)?;
         let cmdsize: u32 = reader.ioread_with(endian)?;
 
         let variant = LcVariant::parse(
-            reader.clone(),
+            reader,
             cmd,
-            cmdsize,
+            cmdsize as usize,
             base_offset,
             endian,
             is_64,
@@ -153,95 +148,95 @@ impl LoadCommand {
 /// List of load commands here - <https://opensource.apple.com/source/xnu/xnu-4570.71.2/EXTERNAL_HEADERS/mach-o/loader.h.auto.html>
 #[derive(Debug, AutoEnumFields)]
 pub enum LcVariant {
-    /// LC_SEGMENT
+    /// `LC_SEGMENT`
     Segment32(LcSegment),
-    /// LC_SEGMENT_64
+    /// `LC_SEGMENT_64`
     Segment64(LcSegment),
-    /// LC_ID_DYLIB
+    /// `LC_ID_DYLIB`
     IdDylib(LcDylib),
-    /// LC_LOAD_DYLIB
+    /// `LC_LOAD_DYLIB`
     LoadDylib(LcDylib),
-    /// LC_LOAD_WEAK_DYLIB
+    /// `LC_LOAD_WEAK_DYLIB`
     LoadWeakDylib(LcDylib),
-    /// LC_REEXPORT_DYLIB
+    /// `LC_REEXPORT_DYLIB`
     ReexportDylib(LcDylib),
-    /// LC_SUB_FRAMEWORK
+    /// `LC_SUB_FRAMEWORK`
     Subframework(LcSubframework),
-    /// LC_SUB_CLIENT
+    /// `LC_SUB_CLIENT`
     Subclient(LcSubclient),
-    /// LC_SUB_UMBRELLA
+    /// `LC_SUB_UMBRELLA`
     Subumbrella(LcSubumbrella),
-    /// LC_SUB_LIBRARY
+    /// `LC_SUB_LIBRARY`
     Sublibrary(LcSublibrary),
-    /// LC_PREBOUND_DYLIB
+    /// `LC_PREBOUND_DYLIB`
     PreboundDylib(LcPreboundDylib),
-    /// LC_ID_DYLINKER,
+    /// `LC_ID_DYLINKER`,
     IdDylinker(LcDylinker),
-    /// LC_LOAD_DYLINKER,
+    /// `LC_LOAD_DYLINKER`,
     LoadDylinker(LcDylinker),
-    /// LC_DYLD_ENVIRONMENT
+    /// `LC_DYLD_ENVIRONMENT`
     DyldEnvironment(LcDylinker),
-    /// LC_THREAD
+    /// `LC_THREAD`
     Thread(LcThread),
-    /// LC_UNIXTHREAD
+    /// `LC_UNIXTHREAD`
     UnixThread(LcThread),
-    /// LC_ROUTINES
+    /// `LC_ROUTINES`
     Routines(LcRoutines),
-    /// LC_ROUTINES_64
+    /// `LC_ROUTINES_64`
     Routines64(LcRoutines64),
-    /// LC_SYMTAB
+    /// `LC_SYMTAB`
     Symtab(LcSymtab),
-    /// LC_DYSYMTAB
+    /// `LC_DYSYMTAB`
     Dysimtab(LcDysimtab),
-    /// LC_TWOLEVEL_HINTS
+    /// `LC_TWOLEVEL_HINTS`
     TwoLevelHints(LcTwoLevelHints),
-    /// LC_PREBIND_CKSUM
+    /// `LC_PREBIND_CKSUM`
     PrebindChekSum(LcPrebindChekSum),
-    /// LC_UUID
+    /// `LC_UUID`
     Uuid(LcUuid),
-    /// LC_RPATH
+    /// `LC_RPATH`
     Rpath(LcRpath),
-    /// LC_CODE_SIGNATURE,
+    /// `LC_CODE_SIGNATURE`,
     CodeSignature(LcLinkEditData),
-    /// LC_SEGMENT_SPLIT_INFO,
+    /// `LC_SEGMENT_SPLIT_INFO`,
     SegmentSplitInfo(LcLinkEditData),
-    /// LC_FUNCTION_STARTS,
+    /// `LC_FUNCTION_STARTS`,
     FunctionStarts(LcLinkEditData),
-    /// LC_DATA_IN_CODE,
+    /// `LC_DATA_IN_CODE`,
     DataInCode(LcLinkEditData),
-    /// LC_DYLIB_CODE_SIGN_DRS,
+    /// `LC_DYLIB_CODE_SIGN_DRS`,
     DylibCodeSignature(LcLinkEditData),
-    /// LC_LINKER_OPTIMIZATION_HINT,
+    /// `LC_LINKER_OPTIMIZATION_HINT`,
     LinkerOptimizationHint(LcLinkEditData),
-    /// LC_ENCRYPTION_INFO
+    /// `LC_ENCRYPTION_INFO`
     EncryptionInfo(LcEncryptionInfo),
-    /// LC_ENCRYPTION_INFO_64
+    /// `LC_ENCRYPTION_INFO_64`
     EncryptionInfo64(LcEncryptionInfo64),
-    /// LC_VERSION_MIN_MACOSX,
+    /// `LC_VERSION_MIN_MACOSX`,
     VersionMinMacOsx(LcVersionMin),
-    /// LC_VERSION_MIN_IPHONEOS,
+    /// `LC_VERSION_MIN_IPHONEOS`,
     VersionMinIphoneOs(LcVersionMin),
-    /// LC_VERSION_MIN_WATCHOS,
+    /// `LC_VERSION_MIN_WATCHOS`,
     VersionMinWatchOs(LcVersionMin),
-    /// LC_VERSION_MIN_TVOS,
+    /// `LC_VERSION_MIN_TVOS`,
     VersionMinTvOs(LcVersionMin),
-    /// LC_BUILD_VERSION
+    /// `LC_BUILD_VERSION`
     BuildVersion(LcBuildVersion),
-    /// LC_DYLD_INFO
+    /// `LC_DYLD_INFO`
     DyldInfo(LcDyldInfo),
-    /// LC_DYLD_INFO_ONLY
+    /// `LC_DYLD_INFO_ONLY`
     DyldInfoOnly(LcDyldInfo),
-    /// LC_LINKER_OPTION
+    /// `LC_LINKER_OPTION`
     LinkerOption(LcLinkerOption),
-    /// LC_SYMSEG
+    /// `LC_SYMSEG`
     SymSeg(LcSymSeg),
-    /// LC_FVMFILE
+    /// `LC_FVMFILE`
     FvmFile(LcFvmFile),
-    /// LC_MAIN
+    /// `LC_MAIN`
     EntryPoint(LcEntryPoint),
-    /// LC_SOURCE_VERSION
+    /// `LC_SOURCE_VERSION`
     SourceVersion(LcSourceVersion),
-    /// LC_NOTE
+    /// `LC_NOTE`
     Note(LcNote),
     /// Any other command type unknown for lib
     Other,
@@ -251,21 +246,31 @@ impl LcVariant {
     fn parse(
         mut reader: Reader,
         cmd: u32,
-        cmdsize: u32,
-        command_offset: usize,
+        cmdsize: usize,
+        command_offset: u64,
         endian: Endian,
         is_64: bool,
         object_file_offset: u64,
     ) -> Result<Self> {
-        let base_offset = reader.stream_position()? as usize;
+        let base_offset = reader.stream_position()?;
         // We assume reader already stay right after `cmd` and `cmdsize`
         match cmd {
             LC_SEGMENT => {
-                let c = LcSegment::parse(reader, base_offset, object_file_offset, X64Context::Off(endian))?;
+                let c = LcSegment::parse(
+                    reader,
+                    base_offset,
+                    object_file_offset,
+                    X64Context::Off(endian),
+                )?;
                 Ok(Self::Segment32(c))
             }
             LC_SEGMENT_64 => {
-                let c = LcSegment::parse(reader, base_offset, object_file_offset, X64Context::On(endian))?;
+                let c = LcSegment::parse(
+                    reader,
+                    base_offset,
+                    object_file_offset,
+                    X64Context::On(endian),
+                )?;
                 Ok(Self::Segment64(c))
             }
             LC_ID_DYLIB => {
@@ -316,12 +321,8 @@ impl LcVariant {
                 let c = LcDylinker::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::DyldEnvironment(c))
             }
-            LC_THREAD => {
-                let c = LcThread::parse(reader, cmdsize, base_offset, endian)?;
-                Ok(Self::Thread(c))
-            }
-            LC_UNIXTHREAD => {
-                let c = LcThread::parse(reader, cmdsize, base_offset, endian)?;
+            LC_THREAD | LC_UNIXTHREAD => {
+                let c = LcThread::parse(reader, cmdsize, base_offset, endian);
                 Ok(Self::Thread(c))
             }
             LC_ROUTINES => {
@@ -333,8 +334,7 @@ impl LcVariant {
                 Ok(Self::Routines64(c))
             }
             LC_SYMTAB => {
-                let c =
-                    LcSymtab::parse(reader, is_64, base_offset, endian, object_file_offset)?;
+                let c = LcSymtab::parse(reader, is_64, base_offset, endian, object_file_offset)?;
                 Ok(Self::Symtab(c))
             }
             LC_DYSYMTAB => {
@@ -358,33 +358,27 @@ impl LcVariant {
                 Ok(Self::Rpath(c))
             }
             LC_CODE_SIGNATURE => {
-                let c =
-                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
+                let c = LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::CodeSignature(c))
             }
             LC_SEGMENT_SPLIT_INFO => {
-                let c =
-                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
+                let c = LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::SegmentSplitInfo(c))
             }
             LC_FUNCTION_STARTS => {
-                let c =
-                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
+                let c = LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::FunctionStarts(c))
             }
             LC_DATA_IN_CODE => {
-                let c =
-                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
+                let c = LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::DataInCode(c))
             }
             LC_DYLIB_CODE_SIGN_DRS => {
-                let c =
-                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
+                let c = LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::DylibCodeSignature(c))
             }
             LC_LINKER_OPTIMIZATION_HINT => {
-                let c =
-                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
+                let c = LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::LinkerOptimizationHint(c))
             }
             LC_ENCRYPTION_INFO => {

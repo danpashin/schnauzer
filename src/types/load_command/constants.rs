@@ -1,4 +1,4 @@
-pub const LC_REQ_DYLD: u32 = 0x80000000;
+pub const LC_REQ_DYLD: u32 = 0x8000_0000;
 
 pub const LC_SEGMENT: u32 = 0x1;
 pub const LC_SYMTAB: u32 = 0x2;

@@ -1,13 +1,13 @@
 use getopts::Options;
 
+use super::common;
+use super::common::options::*;
 use super::common::Format;
 use super::common::ObjectFilter;
-use super::common::options::*;
 use super::handler::*;
 use super::Printer;
 use super::Result;
 use crate::*;
-use super::common;
 
 static SUBCOMM_NAME: &str = "rpaths";
 
@@ -70,7 +70,8 @@ impl RpathsHandler {
             if format.show_indices {
                 self.printer.out_list_item_dash(0, index);
             }
-            self.printer.print_line(common::colored_path_string(cmd.path));
+            self.printer
+                .print_line(common::colored_path_string(cmd.path));
         }
     }
 }

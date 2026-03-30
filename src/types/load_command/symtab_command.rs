@@ -33,11 +33,11 @@ impl LcSymtab {
     pub(super) fn parse(
         mut reader: Reader,
         is_64: bool,
-        base_offset: usize,
+        base_offset: u64,
         endian: scroll::Endian,
         object_file_offset: u64,
     ) -> Result<Self> {
-        reader.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset))?;
 
         let symoff: u32 = reader.ioread_with(endian)?;
         let nsyms: u32 = reader.ioread_with(endian)?;
@@ -65,17 +65,18 @@ impl Debug for LcSymtab {
             .field("nsyms", &self.nsyms)
             .field("stroff", &self.stroff)
             .field("strsize", &self.strsize)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
 impl LcSymtab {
+    #[must_use]
     pub fn nlist_iterator(&self) -> NlistIterator {
         NlistIterator::new(
             self.reader.clone(),
             self.is_64,
-            self.object_file_offset + self.symoff as u64,
-            self.object_file_offset + self.stroff as u64,
+            self.object_file_offset + u64::from(self.symoff),
+            self.object_file_offset + u64::from(self.stroff),
             self.nsyms,
             self.endian,
         )
@@ -123,20 +124,17 @@ impl Iterator for NlistIterator {
             return None;
         }
 
-        let offset = match self.is_64 {
-            true => self.symoff + BYTES_PER_NLIST64 as u64 * self.current as u64,
-            false => self.symoff + BYTES_PER_NLIST32 as u64 * self.current as u64,
+        let offset = if self.is_64 {
+            self.symoff + BYTES_PER_NLIST64 as u64 * self.current as u64
+        } else {
+            self.symoff + BYTES_PER_NLIST32 as u64 * self.current as u64
         };
-        if let Err(_) = self.reader.seek(SeekFrom::Start(offset)) {
+        if self.reader.seek(SeekFrom::Start(offset)).is_err() {
             return None;
         }
 
         self.current += 1;
 
-        if let Ok(nlist) = Nlist::parse(self.reader.clone(), self.stroff, self.is_64, self.endian) {
-            return Some(nlist);
-        } else {
-            return None;
-        }
+        Nlist::parse(self.reader.clone(), self.stroff, self.is_64, self.endian).ok()
     }
 }

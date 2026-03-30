@@ -74,7 +74,8 @@ impl LcHandler {
         }
 
         if format.short {
-            self.printer.print_line(fmt_ext::load_command_to_string(cmd.cmd).yellow());
+            self.printer
+                .print_line(fmt_ext::load_command_to_string(cmd.cmd).yellow());
         } else {
             self.printer.out_field(
                 "cmd".bright_white(),
@@ -86,7 +87,7 @@ impl LcHandler {
                 cmd.cmdsize.to_string().yellow(),
                 "\n",
             );
-    
+
             self.handle_command_variant(cmd.variant);
         }
     }

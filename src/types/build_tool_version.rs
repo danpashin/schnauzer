@@ -1,6 +1,6 @@
 use scroll::{IOread, SizeWith};
 
-use std::fmt::{Debug};
+use std::fmt::Debug;
 
 use super::auto_enum_fields::*;
 use schnauzer_derive::AutoEnumFields;

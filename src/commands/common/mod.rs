@@ -30,7 +30,12 @@ pub(super) const N_CMDS_STR: &str = "Commands";
 pub(super) const SIZE_OF_CMDS_STR: &str = "Size of commands";
 pub(super) const FLAGS_STR: &str = "Flags";
 
-pub(super) fn out_single_arch_title(printer: &Printer, header: &MachHeader, index: usize, short: bool) {
+pub(super) fn out_single_arch_title(
+    printer: &Printer,
+    header: &MachHeader,
+    index: usize,
+    short: bool,
+) {
     let head = format!(
         "{} {}{}",
         ARCH_STR.bold().bright_white(),

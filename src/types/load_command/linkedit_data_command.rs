@@ -21,11 +21,11 @@ pub struct LcLinkEditData {
 impl LcLinkEditData {
     pub(super) fn parse(
         mut reader: Reader,
-        base_offset: usize,
+        base_offset: u64,
         object_file_offset: u64,
         endian: scroll::Endian,
     ) -> crate::result::Result<Self> {
-        reader.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset))?;
 
         let dataoff: u32 = reader.ioread_with(endian)?;
         let datasize: u32 = reader.ioread_with(endian)?;
@@ -44,7 +44,7 @@ impl LcLinkEditData {
 
         let mut reader = self.reader.clone();
         reader.seek(SeekFrom::Start(
-            self.object_file_offset + self.dataoff as u64,
+            self.object_file_offset + u64::from(self.dataoff),
         ))?;
 
         let mut remainig = self.datasize as usize;
@@ -54,16 +54,12 @@ impl LcLinkEditData {
         while remainig > 0 {
             let to_read = min(remainig, BUFFER_SIZE);
 
-            match reader.read_exact(&mut tmp[..to_read]) {
-                Ok(_) => match out.write_all(&mut tmp[..to_read]) {
-                    Ok(_) => (),
-                    Err(e) => {
-                        return Err(crate::result::Error::Other(Box::new(e)));
-                    }
-                },
-                Err(e) => {
-                    return Err(crate::result::Error::Other(Box::new(e)));
-                }
+            if let Err(e) = reader.read_exact(&mut tmp[..to_read]) {
+                return Err(crate::result::Error::Other(Box::new(e)));
+            }
+
+            if let Err(e) = out.write_all(&tmp[..to_read]) {
+                return Err(crate::result::Error::Other(Box::new(e)));
             }
 
             remainig -= to_read;
@@ -78,6 +74,6 @@ impl Debug for LcLinkEditData {
         f.debug_struct("LcLinkEditData")
             .field("dataoff", &self.dataoff)
             .field("datasize", &self.datasize)
-            .finish()
+            .finish_non_exhaustive()
     }
 }

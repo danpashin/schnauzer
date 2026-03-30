@@ -1,7 +1,7 @@
 use crate::Reader;
 use crate::Result;
 
-use scroll::{IOread};
+use scroll::IOread;
 
 use std::fmt::Debug;
 use std::io::{Seek, SeekFrom};
@@ -21,17 +21,17 @@ pub struct LcSubumbrella {
 impl LcSubumbrella {
     pub(super) fn parse(
         mut reader: Reader,
-        command_offset: usize,
-        base_offset: usize,
+        command_offset: u64,
+        base_offset: u64,
         endian: scroll::Endian,
     ) -> Result<Self> {
-        reader.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset))?;
 
         let name_offset: u32 = reader.ioread_with(endian)?;
-        let name_offset = name_offset + command_offset as u32;
+        let name_offset = command_offset + u64::from(name_offset);
 
         let sub_umbrella = LcStr {
-            reader: reader.clone(),
+            reader,
             file_offset: name_offset,
         };
 

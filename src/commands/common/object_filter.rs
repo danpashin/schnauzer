@@ -2,7 +2,7 @@ use getopts::*;
 
 use super::options::*;
 use crate::result::{Error, Result};
-use crate::{MachObject, ObjectType, FatArch};
+use crate::{FatArch, MachObject, ObjectType};
 
 const ARCH_ARG_SHORT: &str = "a";
 const ARCH_ARG_LONG: &str = "arch";

@@ -1,5 +1,3 @@
-use std::fmt::*;
-
 pub trait AutoEnumFields {
     fn all_fields(&self) -> Vec<Field>;
 }
@@ -11,7 +9,8 @@ pub struct Field {
 }
 
 impl Field {
+    #[must_use]
     pub fn new(name: String, value: String) -> Self {
-        Field { name: name, value: value }
-    } 
+        Field { name, value }
+    }
 }

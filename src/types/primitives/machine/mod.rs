@@ -8,7 +8,8 @@ pub use cpu::*;
 use self::cpu_constants::*;
 
 /// Convenience struct for printing architecture short string.
-/// As this structure implements [std::fmt::Display], its function 'to_string()' returns values like: arm64, arm64e, x86_64, x86_64h.
+/// As this structure implements [`std::fmt::Display`]
+/// returns values like: `arm64`, `arm64e`, `x86_64`, `x86_64h`.
 /// TODO: Support other architectures.
 #[allow(non_camel_case_types)]
 pub enum PrintableCPU {
@@ -20,14 +21,8 @@ impl PrintableCPU {
     /// Returns `PrintableCPU` if both `cputype` and `cpusubtype` supported by printable structure.
     pub fn new(cputype: CPUType, cpusubtype: CPUSubtype) -> Option<Self> {
         match cputype {
-            CPU_TYPE_X86_64 => match SubtypeX86_64::new(cpusubtype) {
-                Some(s) => Some(Self::x86_64(s)),
-                None => None,
-            },
-            CPU_TYPE_ARM64 => match SubtypeArm64::new(cpusubtype) {
-                Some(s) => Some(Self::arm64(s)),
-                None => None,
-            },
+            CPU_TYPE_X86_64 => SubtypeX86_64::new(cpusubtype).map(Self::x86_64),
+            CPU_TYPE_ARM64 => SubtypeArm64::new(cpusubtype).map(Self::arm64),
             _ => None,
         }
     }
@@ -36,15 +31,15 @@ impl PrintableCPU {
 impl Debug for PrintableCPU {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::x86_64(arg0) => write!(f, "{}", arg0),
-            Self::arm64(arg0) => write!(f, "{}", arg0),
+            Self::x86_64(arg0) => write!(f, "{arg0}"),
+            Self::arm64(arg0) => write!(f, "{arg0}"),
         }
     }
 }
 
 impl Display for PrintableCPU {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -56,6 +51,7 @@ pub enum SubtypeX86_64 {
 }
 
 impl SubtypeX86_64 {
+    #[must_use]
     pub fn new(cpu_subtype: CPUSubtype) -> Option<Self> {
         match cpu_subtype.masked() {
             CPU_SUBTYPE_X86_64_ALL => Some(Self::x86_64),
@@ -67,7 +63,7 @@ impl SubtypeX86_64 {
 
 impl Display for SubtypeX86_64 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -79,6 +75,7 @@ pub enum SubtypeArm64 {
 }
 
 impl SubtypeArm64 {
+    #[must_use]
     pub fn new(cpu_subtype: CPUSubtype) -> Option<Self> {
         match cpu_subtype.masked() {
             CPU_SUBTYPE_ARM64_ALL => Some(Self::arm64),
@@ -90,6 +87,6 @@ impl SubtypeArm64 {
 
 impl Display for SubtypeArm64 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }

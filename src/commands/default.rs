@@ -36,13 +36,13 @@ impl DefaultHandler {
     }
 
     fn handle_arch(&self, arch: FatArch) {
-        self.printer.print_line(format!("{}", "Fat arch:".bold().bright_white()));
+        self.printer
+            .print_line(format!("{}", "Fat arch:".bold().bright_white()));
 
         for field in arch.all_fields() {
             self.printer.out_dashed_field(&field.name, &field.value, 0);
         }
-        self.printer
-            .out_dashed_field("Mach header", "", 0);
+        self.printer.out_dashed_field("Mach header", "", 0);
 
         self.handle_macho(arch.object().unwrap(), true);
     }
@@ -58,8 +58,7 @@ impl DefaultHandler {
             self.printer
                 .out_dashed_field(&field.name, &field.value, level);
         }
-        self.printer
-            .out_dashed_field("Load commands", "", level);
+        self.printer.out_dashed_field("Load commands", "", level);
 
         self.handle_load_commands(macho.load_commands_iterator(), level + 1);
     }
@@ -98,8 +97,7 @@ impl DefaultHandler {
 
     fn handle_segment_command(&self, seg: LcSegment, level: usize) {
         if seg.nsects > 0 {
-            self.printer
-                .out_dashed_field("Sections", "", level);
+            self.printer.out_dashed_field("Sections", "", level);
         }
         for section in seg.sections_iterator() {
             self.handle_section(section, level + 1);
@@ -115,8 +113,7 @@ impl DefaultHandler {
     }
 
     fn handle_thread_flavor(&self, thread: LcThread, level: usize) {
-        self.printer
-            .out_dashed_field("Flavors", "", level);
+        self.printer.out_dashed_field("Flavors", "", level);
 
         for thread_flavor in thread.flavor_iterator() {
             for field in thread_flavor.all_fields() {

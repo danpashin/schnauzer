@@ -1,4 +1,5 @@
 use super::common;
+use super::common::options::*;
 use super::common::Format;
 use super::common::ObjectFilter;
 use super::handler::*;
@@ -6,7 +7,6 @@ use super::Printer;
 use super::Result;
 use crate::*;
 use colored::*;
-use super::common::options::*;
 use getopts::*;
 
 static SUBCOMM_NAME: &str = "dylibs";
@@ -63,10 +63,12 @@ impl Handler for DylibsHandler {
 
 impl DylibsHandler {
     fn handle_rpath_commands(&self, commands: LoadCommandIterator, format: &Format) {
-        let commands: Vec<LcRpath> = commands.flat_map(|cmd| match cmd.variant {
-            LcVariant::Rpath(rpath) => Some(rpath),
-            _ => None,
-        }).collect();
+        let commands: Vec<LcRpath> = commands
+            .flat_map(|cmd| match cmd.variant {
+                LcVariant::Rpath(rpath) => Some(rpath),
+                _ => None,
+            })
+            .collect();
 
         if commands.len() > 0 {
             println!("{}", "Relative paths:".cyan());
@@ -74,7 +76,8 @@ impl DylibsHandler {
                 if format.show_indices {
                     self.printer.out_list_item_dash(0, index);
                 }
-                self.printer.print_line(common::colored_path_string(cmd.path.to_string()));
+                self.printer
+                    .print_line(common::colored_path_string(cmd.path.to_string()));
             }
             println!("");
         } else {
@@ -83,10 +86,12 @@ impl DylibsHandler {
     }
 
     fn handle_dylib_commands(&self, commands: LoadCommandIterator, format: &Format) {
-        let commands: Vec<LcDylib> = commands.flat_map(|cmd| match cmd.variant {
-            LcVariant::LoadDylib(dylib) => Some(dylib),
-            _ => None,
-        }).collect();
+        let commands: Vec<LcDylib> = commands
+            .flat_map(|cmd| match cmd.variant {
+                LcVariant::LoadDylib(dylib) => Some(dylib),
+                _ => None,
+            })
+            .collect();
 
         if commands.len() > 0 {
             println!("{}", "Dynamic libraries:".cyan());
@@ -97,7 +102,6 @@ impl DylibsHandler {
         } else {
             println!("{}", "No dynamic libraries".dimmed());
         }
-
     }
 
     fn handle_dylib_command(&self, dylib: &LcDylib, index: usize, format: &Format) {
@@ -110,11 +114,8 @@ impl DylibsHandler {
 
         if !format.short {
             self.printer.print_colored_string(" (".bright_white());
-            self.printer.out_default_colored_field(
-                "Timestamp",
-                &dylib.timestamp.to_string(),
-                ", ",
-            );
+            self.printer
+                .out_default_colored_field("Timestamp", &dylib.timestamp.to_string(), ", ");
             self.printer.out_default_colored_field(
                 "Current version",
                 &dylib.current_version.to_string(),

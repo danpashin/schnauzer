@@ -1,9 +1,9 @@
+use crate::primitives::*;
 use crate::Reader;
 use crate::Result;
-use crate::primitives::*;
 
 use scroll::ctx::SizeWith;
-use scroll::{IOread};
+use scroll::IOread;
 
 use std::fmt::Debug;
 use std::io::{Seek, SeekFrom};
@@ -35,9 +35,14 @@ pub struct LcSegment {
 }
 
 impl LcSegment {
-    pub(super) fn parse(mut reader: Reader, base_offset: usize, object_file_offset: u64, ctx: X64Context) -> Result<Self> {
+    pub(super) fn parse(
+        mut reader: Reader,
+        base_offset: u64,
+        object_file_offset: u64,
+        ctx: X64Context,
+    ) -> Result<Self> {
         let endian = *ctx.endian();
-        reader.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset))?;
 
         let segname: Segname = reader.ioread_with(endian)?;
 
@@ -86,11 +91,12 @@ impl Debug for LcSegment {
             .field("initprot", &self.initprot)
             .field("nsects", &self.nsects)
             .field("flags", &self.flags)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
 impl LcSegment {
+    #[must_use]
     pub fn sections_iterator(&self) -> SectionIterator {
         SectionIterator::new(
             self.reader.clone(),
@@ -114,7 +120,13 @@ pub struct SectionIterator {
 }
 
 impl SectionIterator {
-    fn new(reader: Reader, nsects: u32, base_offset: u64, object_file_offset: u64, ctx: X64Context) -> Self {
+    fn new(
+        reader: Reader,
+        nsects: u32,
+        base_offset: u64,
+        object_file_offset: u64,
+        ctx: X64Context,
+    ) -> Self {
         SectionIterator {
             reader,
             nsects,
@@ -134,16 +146,14 @@ impl Iterator for SectionIterator {
             return None;
         }
 
-        let offset = self.base_offset + Section::size_with(&self.ctx) as u64 * self.current as u64;
+        let offset =
+            self.base_offset + Section::size_with(&self.ctx) as u64 * u64::from(self.current);
         self.current += 1;
 
-        if let Err(_) = self.reader.seek(SeekFrom::Start(offset as u64)) {
+        if self.reader.seek(SeekFrom::Start(offset)).is_err() {
             return None;
         }
 
-        match Section::parse(self.reader.clone(), self.ctx, self.object_file_offset) {
-            Ok(sect) => Some(sect),
-            Err(_) => return None,
-        }
+        Section::parse(self.reader.clone(), self.ctx, self.object_file_offset).ok()
     }
 }

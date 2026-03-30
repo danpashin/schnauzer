@@ -1,7 +1,7 @@
 use super::common;
+use super::common::options::AddToOptions;
 use super::common::Format;
 use super::common::ObjectFilter;
-use super::common::options::AddToOptions;
 use super::handler::*;
 use super::Printer;
 use super::Result;
@@ -151,9 +151,15 @@ impl SymsHandler {
 
         let n_sect: Option<Field> = match opts.n_sect {
             NsectOption::None | NsectOption::Unknown => None,
-            NsectOption::Some => Some(Field::new(SECTION_TITLE.to_string(), nlist.n_sect.to_string())),
+            NsectOption::Some => Some(Field::new(
+                SECTION_TITLE.to_string(),
+                nlist.n_sect.to_string(),
+            )),
             NsectOption::Zero => Some(Field::new(SECTION_TITLE.to_string(), 0.to_string())),
-            NsectOption::Raw => Some(Field::new(N_SECT_TITLE.to_string(), nlist.n_sect.to_string())),
+            NsectOption::Raw => Some(Field::new(
+                N_SECT_TITLE.to_string(),
+                nlist.n_sect.to_string(),
+            )),
         };
         if let Some(n_sect) = n_sect {
             fields.push(n_sect);
@@ -176,9 +182,10 @@ impl SymsHandler {
             NdescOption::NestingLevel => {
                 Some(Field::new("Nesting".to_string(), nlist.n_desc.to_string()))
             }
-            NdescOption::Raw => {
-                Some(Field::new(N_DESC_TITLE.to_string(), nlist.n_desc.to_string()))
-            },
+            NdescOption::Raw => Some(Field::new(
+                N_DESC_TITLE.to_string(),
+                nlist.n_desc.to_string(),
+            )),
         };
         if let Some(n_desc) = n_desc {
             fields.push(n_desc);
@@ -186,10 +193,9 @@ impl SymsHandler {
 
         let n_value: Option<Field> = match opts.n_value {
             NvalueOption::None | NvalueOption::Unknown => None,
-            NvalueOption::Address => Some(Field::new(
-                "Address".to_string(),
-                nlist.n_value.to_string(),
-            )),
+            NvalueOption::Address => {
+                Some(Field::new("Address".to_string(), nlist.n_value.to_string()))
+            }
             NvalueOption::Register => Some(Field::new(
                 "Register".to_string(),
                 nlist.n_value.to_string(),
@@ -205,9 +211,10 @@ impl SymsHandler {
             NvalueOption::Length => {
                 Some(Field::new("Length".to_string(), nlist.n_value.to_string()))
             }
-            NvalueOption::Raw => {
-                Some(Field::new(N_VALUE_TITLE.to_string(), nlist.n_value.to_string()))
-            },
+            NvalueOption::Raw => Some(Field::new(
+                N_VALUE_TITLE.to_string(),
+                nlist.n_value.to_string(),
+            )),
         };
         if let Some(n_value) = n_value {
             fields.push(n_value)

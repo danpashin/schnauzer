@@ -3,7 +3,7 @@ use crate::primitives::Hu32;
 use super::load_command::*;
 use uuid::Uuid;
 
-pub fn zero_terminated_str(from: &[u8]) -> core::result::Result<&str, core::str::Utf8Error> {
+pub fn zero_terminated_str(from: &[u8]) -> Result<&str, core::str::Utf8Error> {
     let mut nul_range_end = 0_usize;
     for b in from {
         if *b == 0 {
@@ -11,27 +11,32 @@ pub fn zero_terminated_str(from: &[u8]) -> core::result::Result<&str, core::str:
         }
         nul_range_end += 1;
     }
-    return std::str::from_utf8(&from[0..nul_range_end]);
+    std::str::from_utf8(&from[0..nul_range_end])
 }
 
+#[must_use]
 pub fn printable_string(from: &[u8]) -> String {
     let s = zero_terminated_str(from);
     if let Ok(s) = s {
-        format!("{}", s)
+        s.to_string()
     } else {
-        format!("{:?}", from)
+        format!("{from:?}")
     }
 }
 
+#[must_use]
 pub fn printable_uuid_string(from: &[u8; 16]) -> String {
     let uuid = Uuid::from_slice(from);
     if let Ok(uuid) = uuid {
-        uuid.hyphenated().encode_upper(&mut Uuid::encode_buffer()).to_string()
+        uuid.hyphenated()
+            .encode_upper(&mut Uuid::encode_buffer())
+            .to_string()
     } else {
         printable_string(from)
     }
 }
 
+#[must_use]
 pub fn load_command_to_string(cmd: u32) -> String {
     match cmd {
         LC_SEGMENT => "LC_SEGMENT".to_string(),

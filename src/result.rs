@@ -12,9 +12,9 @@ impl Error {
     fn description(&self) -> String {
         match self {
             Error::BadMagic(v) => format!("Unknown magic: {v}"),
-            Error::BadBufferLength => format!("Invalid buffer length"),
+            Error::BadBufferLength => "Invalid buffer length".to_string(),
             Error::Text(txt) => txt.clone(),
-            Error::Other(e) => format!("Internal error: {:#?}", e),
+            Error::Other(e) => format!("Internal error: {e:#?}"),
         }
     }
 }

@@ -6,6 +6,7 @@ use super::Result;
 use schnauzer_derive::AutoEnumFields;
 use scroll::IOread;
 
+use scroll::ctx::SizeWith;
 use std::fmt::Debug;
 
 #[derive(Clone, AutoEnumFields)]
@@ -59,7 +60,8 @@ impl MachHeader {
 }
 
 impl MachHeader {
-    /// Returns [PrintableCPU] if both `cputype` and `cpusubtype` supported by printable structure.
+    /// Returns [`PrintableCPU`] if both `cputype` and `cpusubtype` supported by printable structure.
+    #[must_use]
     pub fn printable_cpu(&self) -> Option<PrintableCPU> {
         PrintableCPU::new(self.cputype, self.cpusubtype)
     }
@@ -77,5 +79,26 @@ impl Debug for MachHeader {
             .field("flags", &self.flags)
             .field("reserved", &self.reserved)
             .finish()
+    }
+}
+
+impl SizeWith<X64Context> for MachHeader {
+    fn size_with(ctx: &X64Context) -> usize {
+        let endian = ctx.endian();
+
+        let base_size = size_of::<u32>() // magic
+            + CPUType::size_with(endian) // cpu_type
+            + CPUSubtype::size_with(endian) // cpu_subtype
+            + FileType::size_with(endian) // file_type
+            + size_of::<u32>() // ncmds
+            + size_of::<u32>() // size_of_cmds
+            + ObjectFlags::size_with(endian) // size_of_cmds
+        ;
+
+        if ctx.is_64() {
+            base_size + size_of::<u32>() // reserved;
+        } else {
+            base_size
+        }
     }
 }

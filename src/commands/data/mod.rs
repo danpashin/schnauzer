@@ -47,12 +47,7 @@ impl Handler for DataHandler {
         let out_arch = objects.len() > 1;
         for (idx, obj) in objects.iter().enumerate() {
             if out_arch {
-                common::out_single_arch_title(
-                    &self.printer,
-                    &obj.header(),
-                    idx,
-                    false,
-                );
+                common::out_single_arch_title(&self.printer, &obj.header(), idx, false);
             }
             self.handle_load_commands(obj.load_commands_iterator(), &config);
         }
@@ -80,10 +75,12 @@ impl DataHandler {
             _ => None,
         });
 
-        let sections: Vec<Section> = segs.filter_map(|seg| {
-            seg.sections_iterator()
-                .find(|s| s.sectname.to_string() == config.sect)
-        }).collect();
+        let sections: Vec<Section> = segs
+            .filter_map(|seg| {
+                seg.sections_iterator()
+                    .find(|s| s.sectname.to_string() == config.sect)
+            })
+            .collect();
 
         if sections.len() == 0 {
             println!("{}\n", "Section not found".dimmed());
@@ -97,7 +94,11 @@ impl DataHandler {
 
     fn handle_section(&self, sect: Section) {
         use crate::output::hex::*;
-        println!("{} {}", sect.segname.to_string().yellow(), sect.sectname.to_string().yellow());
+        println!(
+            "{} {}",
+            sect.segname.to_string().yellow(),
+            sect.sectname.to_string().yellow()
+        );
         if sect.size.0 == 0 {
             println!("{}\n", "No data in section".dimmed());
         }
