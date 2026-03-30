@@ -22,30 +22,34 @@ pub struct FatArch {
 }
 
 impl FatArch {
-    pub(super) fn parse(mut reader: Reader, base_offset: u64) -> Result<FatArch> {
+    pub(super) fn parse(reader: &Reader, base_offset: u64) -> Result<FatArch> {
         const ENDIAN: scroll::Endian = scroll::BE;
-        reader.seek(SeekFrom::Start(base_offset))?;
 
-        let cpu_type: CPUType = reader.ioread_with(ENDIAN)?;
-        let cpu_subtype: CPUSubtype = reader.ioread_with(ENDIAN)?;
-        let offset: u32 = reader.ioread_with(ENDIAN)?;
-        let size: u32 = reader.ioread_with(ENDIAN)?;
-        let align: u32 = reader.ioread_with(ENDIAN)?;
+        let reader_clone = reader.clone();
+        reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(base_offset))?;
 
-        Ok(FatArch {
-            reader: reader.clone(),
-            cputype: cpu_type,
-            cpusubtype: cpu_subtype,
-            offset,
-            size,
-            align,
+            let cpu_type: CPUType = reader.ioread_with(ENDIAN)?;
+            let cpu_subtype: CPUSubtype = reader.ioread_with(ENDIAN)?;
+            let offset: u32 = reader.ioread_with(ENDIAN)?;
+            let size: u32 = reader.ioread_with(ENDIAN)?;
+            let align: u32 = reader.ioread_with(ENDIAN)?;
+
+            Ok(FatArch {
+                reader: reader_clone,
+                cputype: cpu_type,
+                cpusubtype: cpu_subtype,
+                offset,
+                size,
+                align,
+            })
         })
     }
 }
 
 impl FatArch {
     pub fn object(&self) -> Result<MachObject> {
-        MachObject::parse(self.reader.clone(), u64::from(self.offset))
+        MachObject::parse(&self.reader, u64::from(self.offset))
     }
 
     #[must_use]
@@ -64,7 +68,7 @@ impl Debug for FatArch {
             .field("size", &self.size)
             .field("align", &self.align);
 
-        if let Ok(h) = MachObject::parse(self.reader.clone(), u64::from(self.offset)) {
+        if let Ok(h) = MachObject::parse(&self.reader, u64::from(self.offset)) {
             s.field("mach_header()", &h);
         }
 

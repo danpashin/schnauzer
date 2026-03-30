@@ -31,28 +31,32 @@ pub struct LcSymtab {
 
 impl LcSymtab {
     pub(super) fn parse(
-        mut reader: Reader,
+        reader: &Reader,
         is_64: bool,
         base_offset: u64,
         endian: scroll::Endian,
         object_file_offset: u64,
     ) -> Result<Self> {
-        reader.seek(SeekFrom::Start(base_offset))?;
+        let reader_clone = reader.clone();
 
-        let symoff: u32 = reader.ioread_with(endian)?;
-        let nsyms: u32 = reader.ioread_with(endian)?;
-        let stroff: u32 = reader.ioread_with(endian)?;
-        let strsize: u32 = reader.ioread_with(endian)?;
+        reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(base_offset))?;
 
-        Ok(LcSymtab {
-            reader,
-            is_64,
-            symoff,
-            nsyms,
-            stroff,
-            strsize,
-            endian,
-            object_file_offset,
+            let symoff: u32 = reader.ioread_with(endian)?;
+            let nsyms: u32 = reader.ioread_with(endian)?;
+            let stroff: u32 = reader.ioread_with(endian)?;
+            let strsize: u32 = reader.ioread_with(endian)?;
+
+            Ok(LcSymtab {
+                reader: reader_clone,
+                is_64,
+                symoff,
+                nsyms,
+                stroff,
+                strsize,
+                endian,
+                object_file_offset,
+            })
         })
     }
 }
@@ -135,6 +139,6 @@ impl Iterator for NlistIterator {
 
         self.current += 1;
 
-        Nlist::parse(self.reader.clone(), self.stroff, self.is_64, self.endian).ok()
+        Nlist::parse(&self.reader, self.stroff, self.is_64, self.endian).ok()
     }
 }

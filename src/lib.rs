@@ -22,7 +22,7 @@ mod reader;
 use std::path::Path;
 
 use self::result::Result;
-use reader::Reader;
+pub use reader::Reader;
 pub use types::*;
 
 /// Topmost struct in the library.
@@ -43,7 +43,7 @@ impl Parser {
 
     /// Returns appropriate object - [`FatObject`] or [`MachObject`]
     pub fn parse(self) -> Result<ObjectType> {
-        ObjectType::parse(self.reader.clone())
+        ObjectType::parse(self.reader)
     }
 }
 

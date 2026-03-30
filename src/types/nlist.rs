@@ -98,40 +98,44 @@ pub struct Nlist {
 
 impl Nlist {
     pub(super) fn parse(
-        mut reader: Reader,
+        reader: &Reader,
         stroff: u64,
         is_64: bool,
         endian: scroll::Endian,
     ) -> Result<Self> {
-        let n_strx: u32 = reader.ioread_with(endian)?;
-        let n_type: Ntype = reader.ioread_with(endian)?;
-        let n_sect: u8 = reader.ioread_with(endian)?;
-        let n_desc: u16 = reader.ioread_with(endian)?;
+        let reader_clone = reader.clone();
 
-        let ctx = if is_64 {
-            X64Context::On(endian)
-        } else {
-            X64Context::Off(endian)
-        };
-        let n_value: Hu64 = reader.ioread_with(ctx)?;
+        reader.with_lock(|reader| {
+            let n_strx: u32 = reader.ioread_with(endian)?;
+            let n_type: Ntype = reader.ioread_with(endian)?;
+            let n_sect: u8 = reader.ioread_with(endian)?;
+            let n_desc: u16 = reader.ioread_with(endian)?;
 
-        // If `n_strx > 0`, name is not neccessarily have value. In case of stab it may be an empty string
-        let name: Option<LcStr> = if n_strx > 0 {
-            Some(NlistStr {
-                reader,
-                file_offset: stroff + u64::from(n_strx),
+            let ctx = if is_64 {
+                X64Context::On(endian)
+            } else {
+                X64Context::Off(endian)
+            };
+            let n_value: Hu64 = reader.ioread_with(ctx)?;
+
+            // If `n_strx > 0`, name is not neccessarily have value. In case of stab it may be an empty string
+            let name: Option<LcStr> = if n_strx > 0 {
+                Some(NlistStr {
+                    reader: reader_clone,
+                    file_offset: stroff + u64::from(n_strx),
+                })
+            } else {
+                None
+            };
+
+            Ok(Self {
+                n_strx,
+                n_type,
+                n_sect,
+                n_desc,
+                n_value,
+                name,
             })
-        } else {
-            None
-        };
-
-        Ok(Self {
-            n_strx,
-            n_type,
-            n_sect,
-            n_desc,
-            n_value,
-            name,
         })
     }
 }

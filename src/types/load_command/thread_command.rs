@@ -25,13 +25,13 @@ pub struct LcThread {
 
 impl LcThread {
     pub(super) fn parse(
-        reader: Reader,
+        reader: &Reader,
         cmdsize: usize,
         base_offset: u64,
         endian: scroll::Endian,
     ) -> Self {
         LcThread {
-            reader,
+            reader: reader.clone(),
             cmdsize,
             base_offset,
             endian,
@@ -61,27 +61,29 @@ pub struct LcThreadFlavor {
 
 impl LcThreadFlavor {
     pub(super) fn parse(
-        mut reader: Reader,
+        reader: &Reader,
         base_offset: u64,
         endian: scroll::Endian,
     ) -> Result<Option<Self>> {
-        reader.seek(SeekFrom::Start(base_offset))?;
+        reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(base_offset))?;
 
-        let flavor: u32 = reader.ioread_with(endian)?;
-        let count: u32 = reader.ioread_with(endian)?;
+            let flavor: u32 = reader.ioread_with(endian)?;
+            let count: u32 = reader.ioread_with(endian)?;
 
-        let state_offset = reader.stream_position()?;
+            let state_offset = reader.stream_position()?;
 
-        if flavor == 0 && count == 0 {
-            // We reached the end of the list
-            return Ok(None);
-        }
+            if flavor == 0 && count == 0 {
+                // We reached the end of the list
+                return Ok(None);
+            }
 
-        Ok(Some(LcThreadFlavor {
-            flavor,
-            count: count as usize,
-            state_offset,
-        }))
+            Ok(Some(LcThreadFlavor {
+                flavor,
+                count: count as usize,
+                state_offset,
+            }))
+        })
     }
 
     #[must_use]
@@ -138,7 +140,7 @@ impl Iterator for FlavorIterator {
 
         let offset = self.base_offset + self.current as u64;
 
-        match LcThreadFlavor::parse(self.reader.clone(), offset, self.endian) {
+        match LcThreadFlavor::parse(&self.reader, offset, self.endian) {
             Ok(Some(lc_thread_flavor)) => {
                 self.current += lc_thread_flavor.calculate_flavor_size();
                 Some(lc_thread_flavor)

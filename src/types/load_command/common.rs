@@ -46,13 +46,14 @@ pub struct BitVec {
 
 impl BitVec {
     pub fn load_bit_vector(&self) -> Result<Vec<u8>> {
-        let mut reader_mut = self.reader.clone();
-        reader_mut.seek(SeekFrom::Start(self.file_offset))?;
+        self.reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(self.file_offset))?;
 
-        let mut v = vec![0u8; self.bytecount as usize];
-        reader_mut.read_exact(&mut v)?;
+            let mut v = vec![0u8; self.bytecount as usize];
+            reader.read_exact(&mut v)?;
 
-        Ok(v)
+            Ok(v)
+        })
     }
 }
 

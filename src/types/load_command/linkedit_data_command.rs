@@ -20,21 +20,25 @@ pub struct LcLinkEditData {
 
 impl LcLinkEditData {
     pub(super) fn parse(
-        mut reader: Reader,
+        reader: &Reader,
         base_offset: u64,
         object_file_offset: u64,
         endian: scroll::Endian,
     ) -> crate::result::Result<Self> {
-        reader.seek(SeekFrom::Start(base_offset))?;
+        let reader_clone = reader.clone();
 
-        let dataoff: u32 = reader.ioread_with(endian)?;
-        let datasize: u32 = reader.ioread_with(endian)?;
+        reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(base_offset))?;
 
-        Ok(LcLinkEditData {
-            reader,
-            object_file_offset,
-            dataoff,
-            datasize,
+            let dataoff: u32 = reader.ioread_with(endian)?;
+            let datasize: u32 = reader.ioread_with(endian)?;
+
+            Ok(LcLinkEditData {
+                reader: reader_clone,
+                object_file_offset,
+                dataoff,
+                datasize,
+            })
         })
     }
 
@@ -42,30 +46,31 @@ impl LcLinkEditData {
         use std::cmp::min;
         const BUFFER_SIZE: usize = 4096;
 
-        let mut reader = self.reader.clone();
-        reader.seek(SeekFrom::Start(
-            self.object_file_offset + u64::from(self.dataoff),
-        ))?;
+        self.reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(
+                self.object_file_offset + u64::from(self.dataoff),
+            ))?;
 
-        let mut remainig = self.datasize as usize;
+            let mut remainig = self.datasize as usize;
 
-        let mut tmp = [0u8; BUFFER_SIZE];
+            let mut tmp = [0u8; BUFFER_SIZE];
 
-        while remainig > 0 {
-            let to_read = min(remainig, BUFFER_SIZE);
+            while remainig > 0 {
+                let to_read = min(remainig, BUFFER_SIZE);
 
-            if let Err(e) = reader.read_exact(&mut tmp[..to_read]) {
-                return Err(crate::result::Error::Other(Box::new(e)));
+                if let Err(e) = reader.read_exact(&mut tmp[..to_read]) {
+                    return Err(crate::result::Error::Other(Box::new(e)));
+                }
+
+                if let Err(e) = out.write_all(&tmp[..to_read]) {
+                    return Err(crate::result::Error::Other(Box::new(e)));
+                }
+
+                remainig -= to_read;
             }
 
-            if let Err(e) = out.write_all(&tmp[..to_read]) {
-                return Err(crate::result::Error::Other(Box::new(e)));
-            }
-
-            remainig -= to_read;
-        }
-
-        Ok(())
+            Ok(())
+        })
     }
 }
 

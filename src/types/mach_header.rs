@@ -23,38 +23,39 @@ pub struct MachHeader {
 
 impl MachHeader {
     /// We assume reader is already stands on correct position
-    pub(super) fn parse(mut reader: Reader) -> Result<MachHeader> {
-        let mut ctx = scroll::BE;
+    pub(super) fn parse(reader: &Reader) -> Result<MachHeader> {
+        reader.with_lock(|reader| {
+            let mut ctx = scroll::BE;
+            let magic: u32 = reader.ioread_with(ctx)?;
+            let magic: Magic = magic.try_into()?;
 
-        let magic: u32 = reader.ioread_with(ctx)?;
-        let magic: Magic = magic.try_into()?;
+            if magic.is_reverse() {
+                ctx = scroll::LE;
+            }
+            let ctx = ctx;
 
-        if magic.is_reverse() {
-            ctx = scroll::LE;
-        }
-        let ctx = ctx;
+            let cpu_type: CPUType = reader.ioread_with(ctx)?;
+            let cpu_subtype: CPUSubtype = reader.ioread_with(ctx)?;
+            let file_type: FileType = reader.ioread_with(ctx)?;
+            let ncmds: u32 = reader.ioread_with(ctx)?;
+            let size_of_cmds: u32 = reader.ioread_with(ctx)?;
+            let flags: ObjectFlags = reader.ioread_with(ctx)?;
 
-        let cpu_type: CPUType = reader.ioread_with(ctx)?;
-        let cpu_subtype: CPUSubtype = reader.ioread_with(ctx)?;
-        let file_type: FileType = reader.ioread_with(ctx)?;
-        let ncmds: u32 = reader.ioread_with(ctx)?;
-        let size_of_cmds: u32 = reader.ioread_with(ctx)?;
-        let flags: ObjectFlags = reader.ioread_with(ctx)?;
+            let mut reserved = 0u32;
+            if magic.is_64() {
+                reserved = reader.ioread_with(ctx)?;
+            }
 
-        let mut reserved = 0u32;
-        if magic.is_64() {
-            reserved = reader.ioread_with(ctx)?;
-        }
-
-        Ok(MachHeader {
-            magic,
-            cputype: cpu_type,
-            cpusubtype: cpu_subtype,
-            filetype: file_type,
-            ncmds,
-            sizeofcmds: size_of_cmds,
-            flags,
-            reserved: Hu32(reserved),
+            Ok(MachHeader {
+                magic,
+                cputype: cpu_type,
+                cpusubtype: cpu_subtype,
+                filetype: file_type,
+                ncmds,
+                sizeofcmds: size_of_cmds,
+                flags,
+                reserved: Hu32(reserved),
+            })
         })
     }
 }

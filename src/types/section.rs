@@ -38,42 +38,42 @@ pub struct Section {
 }
 
 impl Section {
-    pub(super) fn parse(
-        mut reader: Reader,
-        ctx: X64Context,
-        object_file_offset: u64,
-    ) -> Result<Self> {
-        let endian = *ctx.endian();
+    pub(super) fn parse(reader: &Reader, ctx: X64Context, object_file_offset: u64) -> Result<Self> {
+        let reader_clone = reader.clone();
 
-        let sectname: Str16Bytes = reader.ioread_with(endian)?;
-        let segname: Str16Bytes = reader.ioread_with(endian)?;
-        let addr: Hu64 = reader.ioread_with(ctx)?;
-        let size: Hu64 = reader.ioread_with(ctx)?;
-        let offset: u32 = reader.ioread_with(endian)?;
-        let align: u32 = reader.ioread_with(endian)?;
-        let reloff: u32 = reader.ioread_with(endian)?;
-        let nreloc: u32 = reader.ioread_with(endian)?;
-        let flags: Hu32 = reader.ioread_with(endian)?;
-        let reserved1: u32 = reader.ioread_with(endian)?;
-        let reserved2: u32 = reader.ioread_with(endian)?;
-        let reserved3: u32opt = reader.ioread_with(ctx)?;
+        reader.with_lock(|reader| {
+            let endian = *ctx.endian();
 
-        Ok(Self {
-            object_file_offset,
-            sectname,
-            segname,
-            addr,
-            size,
-            offset,
-            align,
-            reloff,
-            nreloc,
-            flags,
-            reserved1,
-            reserved2,
-            reserved3,
-            reader,
-            endian,
+            let sectname: Str16Bytes = reader.ioread_with(endian)?;
+            let segname: Str16Bytes = reader.ioread_with(endian)?;
+            let addr: Hu64 = reader.ioread_with(ctx)?;
+            let size: Hu64 = reader.ioread_with(ctx)?;
+            let offset: u32 = reader.ioread_with(endian)?;
+            let align: u32 = reader.ioread_with(endian)?;
+            let reloff: u32 = reader.ioread_with(endian)?;
+            let nreloc: u32 = reader.ioread_with(endian)?;
+            let flags: Hu32 = reader.ioread_with(endian)?;
+            let reserved1: u32 = reader.ioread_with(endian)?;
+            let reserved2: u32 = reader.ioread_with(endian)?;
+            let reserved3: u32opt = reader.ioread_with(ctx)?;
+
+            Ok(Self {
+                object_file_offset,
+                sectname,
+                segname,
+                addr,
+                size,
+                offset,
+                align,
+                reloff,
+                nreloc,
+                flags,
+                reserved1,
+                reserved2,
+                reserved3,
+                reader: reader_clone,
+                endian,
+            })
         })
     }
 }
@@ -83,26 +83,27 @@ impl Section {
         use std::cmp::min;
         const BUFFER_SIZE: usize = 4096;
 
-        let mut reader = self.reader.clone();
-        reader.seek(SeekFrom::Start(
-            self.object_file_offset + u64::from(self.offset),
-        ))?;
+        self.reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(
+                self.object_file_offset + u64::from(self.offset),
+            ))?;
 
-        let mut remainig = usize::try_from(self.size.0)
-            .map_err(|err| std::io::Error::new(std::io::ErrorKind::FileTooLarge, err))?;
+            let mut remainig = usize::try_from(self.size.0)
+                .map_err(|err| std::io::Error::new(std::io::ErrorKind::FileTooLarge, err))?;
 
-        let mut tmp = vec![0u8; BUFFER_SIZE];
+            let mut tmp = vec![0u8; BUFFER_SIZE];
 
-        while remainig > 0 {
-            let to_read = min(remainig, BUFFER_SIZE);
+            while remainig > 0 {
+                let to_read = min(remainig, BUFFER_SIZE);
 
-            reader.read_exact(&mut tmp[..to_read])?;
-            out.write_all(&tmp[..to_read])?;
+                reader.read_exact(&mut tmp[..to_read])?;
+                out.write_all(&tmp[..to_read])?;
 
-            remainig -= to_read;
-        }
+                remainig -= to_read;
+            }
 
-        Ok(())
+            Ok(())
+        })
     }
 }
 
@@ -171,12 +172,13 @@ impl Iterator for RelocationIterator {
             + RelocationInfo::size_with(&self.endian) as u64 * u64::from(self.current);
         self.current += 1;
 
-        let mut reader = self.reader.clone();
-        if reader.seek(SeekFrom::Start(offset)).is_err() {
-            return None;
-        }
+        self.reader.with_lock(|reader| {
+            if reader.seek(SeekFrom::Start(offset)).is_err() {
+                return None;
+            }
 
-        reader.ioread_with::<RelocationInfo>(self.endian).ok()
+            reader.ioread_with::<RelocationInfo>(self.endian).ok()
+        })
     }
 }
 

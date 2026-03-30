@@ -24,30 +24,34 @@ pub struct LcDylib {
 
 impl LcDylib {
     pub(super) fn parse(
-        mut reader: Reader,
+        reader: &Reader,
         command_offset: u64,
         base_offset: u64,
         endian: scroll::Endian,
     ) -> Result<Self> {
-        reader.seek(SeekFrom::Start(base_offset))?;
+        let reader_clone = reader.clone();
 
-        let name_offset: u32 = reader.ioread_with(endian)?;
-        let timestamp: u32 = reader.ioread_with(endian)?;
-        let current_version: Version32 = reader.ioread_with(endian)?;
-        let compatibility_version: Version32 = reader.ioread_with(endian)?;
+        reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(base_offset))?;
 
-        let name_offset = command_offset + u64::from(name_offset);
+            let name_offset: u32 = reader.ioread_with(endian)?;
+            let timestamp: u32 = reader.ioread_with(endian)?;
+            let current_version: Version32 = reader.ioread_with(endian)?;
+            let compatibility_version: Version32 = reader.ioread_with(endian)?;
 
-        let name = LcStr {
-            reader,
-            file_offset: name_offset,
-        };
+            let name_offset = command_offset + u64::from(name_offset);
 
-        Ok(LcDylib {
-            name,
-            timestamp,
-            current_version,
-            compatibility_version,
+            let name = LcStr {
+                reader: reader_clone,
+                file_offset: name_offset,
+            };
+
+            Ok(LcDylib {
+                name,
+                timestamp,
+                current_version,
+                compatibility_version,
+            })
         })
     }
 }

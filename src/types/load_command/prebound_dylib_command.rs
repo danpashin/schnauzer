@@ -23,35 +23,39 @@ pub struct LcPreboundDylib {
 
 impl LcPreboundDylib {
     pub(super) fn parse(
-        mut reader: Reader,
+        reader: &Reader,
         command_offset: u64,
         base_offset: u64,
         endian: scroll::Endian,
     ) -> Result<Self> {
-        reader.seek(SeekFrom::Start(base_offset))?;
+        let reader_clone = reader.clone();
 
-        let name_offset: u32 = reader.ioread_with(endian)?;
-        let nmodules: u32 = reader.ioread_with(endian)?;
-        let linked_modules_offset: u32 = reader.ioread_with(endian)?;
+        reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(base_offset))?;
 
-        let name_offset = command_offset + u64::from(name_offset);
-        let linked_modules_offset = command_offset + u64::from(linked_modules_offset);
+            let name_offset: u32 = reader.ioread_with(endian)?;
+            let nmodules: u32 = reader.ioread_with(endian)?;
+            let linked_modules_offset: u32 = reader.ioread_with(endian)?;
 
-        let name = LcStr {
-            reader: reader.clone(),
-            file_offset: name_offset,
-        };
+            let name_offset = command_offset + u64::from(name_offset);
+            let linked_modules_offset = command_offset + u64::from(linked_modules_offset);
 
-        let linked_modules = BitVec {
-            reader,
-            file_offset: linked_modules_offset,
-            bytecount: nmodules,
-        };
+            let name = LcStr {
+                reader: reader_clone.clone(),
+                file_offset: name_offset,
+            };
 
-        Ok(LcPreboundDylib {
-            name,
-            nmodules,
-            linked_modules,
+            let linked_modules = BitVec {
+                reader: reader_clone,
+                file_offset: linked_modules_offset,
+                bytecount: nmodules,
+            };
+
+            Ok(LcPreboundDylib {
+                name,
+                nmodules,
+                linked_modules,
+            })
         })
     }
 }

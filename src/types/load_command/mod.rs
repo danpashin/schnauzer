@@ -115,16 +115,20 @@ impl Debug for LoadCommand {
 
 impl LoadCommand {
     pub(super) fn parse(
-        mut reader: Reader,
+        reader: &mut Reader,
         base_offset: u64,
         endian: scroll::Endian,
         is_64: bool,
         object_file_offset: u64,
     ) -> Result<LoadCommand> {
-        reader.seek(SeekFrom::Start(base_offset))?;
+        let (cmd, cmdsize) = reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(base_offset))?;
 
-        let cmd: u32 = reader.ioread_with(endian)?;
-        let cmdsize: u32 = reader.ioread_with(endian)?;
+            let cmd: u32 = reader.ioread_with(endian)?;
+            let cmdsize: u32 = reader.ioread_with(endian)?;
+
+            Ok::<_, crate::result::Error>((cmd, cmdsize))
+        })?;
 
         let variant = LcVariant::parse(
             reader,
@@ -244,7 +248,7 @@ pub enum LcVariant {
 
 impl LcVariant {
     fn parse(
-        mut reader: Reader,
+        reader: &mut Reader,
         cmd: u32,
         cmdsize: usize,
         command_offset: u64,

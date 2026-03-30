@@ -20,10 +20,10 @@ pub struct MachObject {
 }
 
 impl MachObject {
-    pub(super) fn parse(mut reader: Reader, base_offset: u64) -> Result<MachObject> {
-        reader.seek(SeekFrom::Start(base_offset))?;
+    pub(super) fn parse(reader: &Reader, base_offset: u64) -> Result<MachObject> {
+        reader.with_lock(|reader| reader.seek(SeekFrom::Start(base_offset)))?;
 
-        let header = MachHeader::parse(reader.clone())?;
+        let header = MachHeader::parse(reader)?;
 
         let ctx = match (header.magic.is_reverse(), header.magic.is_64()) {
             (false, true) => X64Context::On(scroll::BE),
@@ -39,7 +39,7 @@ impl MachObject {
         let commands_offset = base_offset + header_size as u64;
 
         Ok(MachObject {
-            reader,
+            reader: reader.clone(),
             header,
             commands_offset,
             base_offset,
@@ -126,7 +126,7 @@ impl Iterator for LoadCommandIterator {
         }
 
         let lc = LoadCommand::parse(
-            self.reader.clone(),
+            &mut self.reader,
             self.current_offset,
             self.endian,
             self.is_64,

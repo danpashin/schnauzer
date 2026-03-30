@@ -36,45 +36,49 @@ pub struct LcSegment {
 
 impl LcSegment {
     pub(super) fn parse(
-        mut reader: Reader,
+        reader: &Reader,
         base_offset: u64,
         object_file_offset: u64,
         ctx: X64Context,
     ) -> Result<Self> {
-        let endian = *ctx.endian();
-        reader.seek(SeekFrom::Start(base_offset))?;
+        let reader_clone = reader.clone();
 
-        let segname: Segname = reader.ioread_with(endian)?;
+        reader.with_lock(|reader| {
+            let endian = *ctx.endian();
+            reader.seek(SeekFrom::Start(base_offset))?;
 
-        let vmaddr: u64_io = reader.ioread_with(ctx)?;
-        let vmaddr = Hu64(vmaddr.0);
+            let segname: Segname = reader.ioread_with(endian)?;
 
-        let vmsize: u64_io = reader.ioread_with(ctx)?;
-        let vmsize = Hu64(vmsize.0);
+            let vmaddr: u64_io = reader.ioread_with(ctx)?;
+            let vmaddr = Hu64(vmaddr.0);
 
-        let fileoff: u64_io = reader.ioread_with(ctx)?;
-        let filesize: u64_io = reader.ioread_with(ctx)?;
-        let maxprot: VmProt = reader.ioread_with(endian)?;
-        let initprot: VmProt = reader.ioread_with(endian)?;
-        let nsects: u32 = reader.ioread_with(endian)?;
-        let flags: Hu32 = reader.ioread_with(endian)?;
+            let vmsize: u64_io = reader.ioread_with(ctx)?;
+            let vmsize = Hu64(vmsize.0);
 
-        let sects_offset = reader.stream_position()?;
+            let fileoff: u64_io = reader.ioread_with(ctx)?;
+            let filesize: u64_io = reader.ioread_with(ctx)?;
+            let maxprot: VmProt = reader.ioread_with(endian)?;
+            let initprot: VmProt = reader.ioread_with(endian)?;
+            let nsects: u32 = reader.ioread_with(endian)?;
+            let flags: Hu32 = reader.ioread_with(endian)?;
 
-        Ok(LcSegment {
-            reader,
-            segname,
-            vmaddr,
-            vmsize,
-            fileoff,
-            filesize,
-            maxprot,
-            initprot,
-            nsects,
-            flags,
-            object_file_offset,
-            sects_offset,
-            ctx,
+            let sects_offset = reader.stream_position()?;
+
+            Ok(LcSegment {
+                reader: reader_clone,
+                segname,
+                vmaddr,
+                vmsize,
+                fileoff,
+                filesize,
+                maxprot,
+                initprot,
+                nsects,
+                flags,
+                object_file_offset,
+                sects_offset,
+                ctx,
+            })
         })
     }
 }
@@ -154,6 +158,6 @@ impl Iterator for SectionIterator {
             return None;
         }
 
-        Section::parse(self.reader.clone(), self.ctx, self.object_file_offset).ok()
+        Section::parse(&self.reader, self.ctx, self.object_file_offset).ok()
     }
 }

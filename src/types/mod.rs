@@ -49,14 +49,14 @@ pub enum ObjectType {
 }
 
 impl ObjectType {
-    pub(super) fn parse(mut reader: Reader) -> Result<ObjectType> {
+    pub fn parse(mut reader: Reader) -> Result<ObjectType> {
         let magic = reader.ioread_with::<u32>(scroll::BE)?;
         let magic: Magic = magic.try_into()?;
         if magic.is_fat() {
-            let header = FatObject::parse(reader.clone())?;
+            let header = FatObject::parse(&reader)?;
             Ok(ObjectType::Fat(header))
         } else {
-            let header = MachObject::parse(reader.clone(), 0)?;
+            let header = MachObject::parse(&reader, 0)?;
             Ok(ObjectType::MachO(header))
         }
     }

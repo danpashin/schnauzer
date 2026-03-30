@@ -20,21 +20,25 @@ pub struct LcSubclient {
 
 impl LcSubclient {
     pub(super) fn parse(
-        mut reader: Reader,
+        reader: &Reader,
         command_offset: u64,
         base_offset: u64,
         endian: scroll::Endian,
     ) -> Result<Self> {
-        reader.seek(SeekFrom::Start(base_offset))?;
+        let reader_clone = reader.clone();
 
-        let name_offset: u32 = reader.ioread_with(endian)?;
-        let name_offset = command_offset + u64::from(name_offset);
+        reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(base_offset))?;
 
-        let client = LcStr {
-            reader,
-            file_offset: name_offset,
-        };
+            let name_offset: u32 = reader.ioread_with(endian)?;
+            let name_offset = command_offset + u64::from(name_offset);
 
-        Ok(LcSubclient { client })
+            let client = LcStr {
+                reader: reader_clone,
+                file_offset: name_offset,
+            };
+
+            Ok(LcSubclient { client })
+        })
     }
 }

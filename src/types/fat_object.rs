@@ -19,15 +19,19 @@ pub struct FatObject {
 }
 
 impl FatObject {
-    pub(super) fn parse(mut reader: Reader) -> Result<FatObject> {
+    pub(super) fn parse(reader: &Reader) -> Result<FatObject> {
         let offset = BYTES_PER_MAGIC;
-        reader.seek(SeekFrom::Start(offset as u64))?;
-        let nfat_arch: u32 = reader.ioread_with(scroll::BE)?;
 
-        Ok(FatObject {
-            reader,
-            arch_list_offset: BYTES_PER_FAT_HEADER,
-            nfat_arch,
+        let reader_clone = reader.clone();
+        reader.with_lock(|reader| {
+            reader.seek(SeekFrom::Start(offset as u64))?;
+            let nfat_arch: u32 = reader.ioread_with(scroll::BE)?;
+
+            Ok(FatObject {
+                reader: reader_clone,
+                arch_list_offset: BYTES_PER_FAT_HEADER,
+                nfat_arch,
+            })
         })
     }
 }
@@ -93,6 +97,6 @@ impl Iterator for FatArchIterator {
 
         self.current += 1;
 
-        FatArch::parse(self.reader.clone(), offset as u64).ok()
+        FatArch::parse(&self.reader, offset as u64).ok()
     }
 }
