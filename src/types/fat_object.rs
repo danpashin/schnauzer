@@ -2,7 +2,7 @@ use crate::MachObject;
 
 use super::constants::*;
 use super::FatArch;
-use super::RcReader;
+use super::Reader;
 use super::Result;
 use scroll::IOread;
 
@@ -12,17 +12,17 @@ use std::io::{Seek, SeekFrom};
 /// Represents `fat_header` (but does not include magic)
 /// Some files contains multiple architectures
 pub struct FatObject {
-    pub(super) reader: RcReader,
+    pub(super) reader: Reader,
 
     pub nfat_arch: u32,
     arch_list_offset: usize,
 }
 
 impl FatObject {
-    pub(super) fn parse(reader: RcReader) -> Result<FatObject> {
+    pub(super) fn parse(mut reader: Reader) -> Result<FatObject> {
         let offset = BYTES_PER_MAGIC;
-        reader.borrow_mut().seek(SeekFrom::Start(offset as u64))?;
-        let nfat_arch: u32 = reader.borrow_mut().ioread_with(scroll::BE)?;
+        reader.seek(SeekFrom::Start(offset as u64))?;
+        let nfat_arch: u32 = reader.ioread_with(scroll::BE)?;
 
         Ok(FatObject {
             reader: reader.clone(),
@@ -61,7 +61,7 @@ impl Debug for FatObject {
 
 /// Iterator over fat architectures
 pub struct FatArchIterator {
-    reader: RcReader,
+    reader: Reader,
     nfat_arch: u32,
 
     base_offset: usize,
@@ -70,7 +70,7 @@ pub struct FatArchIterator {
 }
 
 impl FatArchIterator {
-    fn build(reader: RcReader, nfat_arch: u32, base_offset: usize) -> Result<FatArchIterator> {
+    fn build(reader: Reader, nfat_arch: u32, base_offset: usize) -> Result<FatArchIterator> {
         Ok(FatArchIterator {
             reader,
             nfat_arch,

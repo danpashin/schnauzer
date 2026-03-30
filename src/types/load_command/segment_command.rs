@@ -1,4 +1,4 @@
-use crate::RcReader;
+use crate::Reader;
 use crate::Result;
 use crate::primitives::*;
 
@@ -17,7 +17,7 @@ use super::Section;
 #[repr(C)]
 #[derive(AutoEnumFields)]
 pub struct LcSegment {
-    reader: RcReader,
+    reader: Reader,
 
     pub segname: Segname,
     pub vmaddr: Hu64,
@@ -35,31 +35,29 @@ pub struct LcSegment {
 }
 
 impl LcSegment {
-    pub(super) fn parse(reader: RcReader, base_offset: usize, object_file_offset: u64, ctx: X64Context) -> Result<Self> {
+    pub(super) fn parse(mut reader: Reader, base_offset: usize, object_file_offset: u64, ctx: X64Context) -> Result<Self> {
         let endian = *ctx.endian();
-        let reader_clone = reader.clone();
-        let mut reader_mut = reader.borrow_mut();
-        reader_mut.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset as u64))?;
 
-        let segname: Segname = reader_mut.ioread_with(endian)?;
+        let segname: Segname = reader.ioread_with(endian)?;
 
-        let vmaddr: u64_io = reader_mut.ioread_with(ctx)?;
+        let vmaddr: u64_io = reader.ioread_with(ctx)?;
         let vmaddr = Hu64(vmaddr.0);
 
-        let vmsize: u64_io = reader_mut.ioread_with(ctx)?;
+        let vmsize: u64_io = reader.ioread_with(ctx)?;
         let vmsize = Hu64(vmsize.0);
 
-        let fileoff: u64_io = reader_mut.ioread_with(ctx)?;
-        let filesize: u64_io = reader_mut.ioread_with(ctx)?;
-        let maxprot: VmProt = reader_mut.ioread_with(endian)?;
-        let initprot: VmProt = reader_mut.ioread_with(endian)?;
-        let nsects: u32 = reader_mut.ioread_with(endian)?;
-        let flags: Hu32 = reader_mut.ioread_with(endian)?;
+        let fileoff: u64_io = reader.ioread_with(ctx)?;
+        let filesize: u64_io = reader.ioread_with(ctx)?;
+        let maxprot: VmProt = reader.ioread_with(endian)?;
+        let initprot: VmProt = reader.ioread_with(endian)?;
+        let nsects: u32 = reader.ioread_with(endian)?;
+        let flags: Hu32 = reader.ioread_with(endian)?;
 
-        let sects_offset = reader_mut.stream_position()?;
+        let sects_offset = reader.stream_position()?;
 
         Ok(LcSegment {
-            reader: reader_clone,
+            reader,
             segname,
             vmaddr,
             vmsize,
@@ -105,7 +103,7 @@ impl LcSegment {
 }
 
 pub struct SectionIterator {
-    reader: RcReader,
+    reader: Reader,
 
     nsects: u32,
     base_offset: u64,
@@ -116,7 +114,7 @@ pub struct SectionIterator {
 }
 
 impl SectionIterator {
-    fn new(reader: RcReader, nsects: u32, base_offset: u64, object_file_offset: u64, ctx: X64Context) -> Self {
+    fn new(reader: Reader, nsects: u32, base_offset: u64, object_file_offset: u64, ctx: X64Context) -> Self {
         SectionIterator {
             reader,
             nsects,
@@ -139,12 +137,9 @@ impl Iterator for SectionIterator {
         let offset = self.base_offset + Section::size_with(&self.ctx) as u64 * self.current as u64;
         self.current += 1;
 
-        let mut reader_mut = self.reader.borrow_mut();
-        if let Err(_) = reader_mut.seek(SeekFrom::Start(offset as u64)) {
+        if let Err(_) = self.reader.seek(SeekFrom::Start(offset as u64)) {
             return None;
         }
-
-        std::mem::drop(reader_mut);
 
         match Section::parse(self.reader.clone(), self.ctx, self.object_file_offset) {
             Ok(sect) => Some(sect),

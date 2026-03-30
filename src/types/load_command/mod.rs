@@ -2,7 +2,7 @@ use crate::X64Context;
 
 use super::fmt_ext::*;
 use super::Section;
-use super::RcReader;
+use super::Reader;
 use super::Result;
 use scroll::{Endian, IOread};
 
@@ -120,19 +120,16 @@ impl Debug for LoadCommand {
 
 impl LoadCommand {
     pub(super) fn parse(
-        reader: RcReader,
+        mut reader: Reader,
         base_offset: usize,
         endian: scroll::Endian,
         is_64: bool,
         object_file_offset: u64,
     ) -> Result<LoadCommand> {
-        let mut reader_mut = reader.borrow_mut();
-        reader_mut.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset as u64))?;
 
-        let cmd: u32 = reader_mut.ioread_with(endian)?;
-        let cmdsize: u32 = reader_mut.ioread_with(endian)?;
-
-        std::mem::drop(reader_mut);
+        let cmd: u32 = reader.ioread_with(endian)?;
+        let cmdsize: u32 = reader.ioread_with(endian)?;
 
         let variant = LcVariant::parse(
             reader.clone(),
@@ -252,7 +249,7 @@ pub enum LcVariant {
 
 impl LcVariant {
     fn parse(
-        reader: RcReader,
+        mut reader: Reader,
         cmd: u32,
         cmdsize: u32,
         command_offset: usize,
@@ -260,221 +257,194 @@ impl LcVariant {
         is_64: bool,
         object_file_offset: u64,
     ) -> Result<Self> {
-        let reader_clone = reader.clone();
-        let mut reader_mut = reader.borrow_mut();
-        let base_offset = reader_mut.stream_position()? as usize;
+        let base_offset = reader.stream_position()? as usize;
         // We assume reader already stay right after `cmd` and `cmdsize`
         match cmd {
             LC_SEGMENT => {
-                std::mem::drop(reader_mut);
-                let c = LcSegment::parse(reader_clone, base_offset, object_file_offset, X64Context::Off(endian))?;
+                let c = LcSegment::parse(reader, base_offset, object_file_offset, X64Context::Off(endian))?;
                 Ok(Self::Segment32(c))
             }
             LC_SEGMENT_64 => {
-                std::mem::drop(reader_mut);
-                let c = LcSegment::parse(reader_clone, base_offset, object_file_offset, X64Context::On(endian))?;
+                let c = LcSegment::parse(reader, base_offset, object_file_offset, X64Context::On(endian))?;
                 Ok(Self::Segment64(c))
             }
             LC_ID_DYLIB => {
-                std::mem::drop(reader_mut);
-                let c = LcDylib::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcDylib::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::IdDylib(c))
             }
             LC_LOAD_DYLIB => {
-                std::mem::drop(reader_mut);
-                let c = LcDylib::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcDylib::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::LoadDylib(c))
             }
             LC_LOAD_WEAK_DYLIB => {
-                std::mem::drop(reader_mut);
-                let c = LcDylib::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcDylib::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::LoadWeakDylib(c))
             }
             LC_REEXPORT_DYLIB => {
-                std::mem::drop(reader_mut);
-                let c = LcDylib::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcDylib::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::ReexportDylib(c))
             }
             LC_SUB_FRAMEWORK => {
-                std::mem::drop(reader_mut);
-                let c = LcSubframework::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcSubframework::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::Subframework(c))
             }
             LC_SUB_CLIENT => {
-                std::mem::drop(reader_mut);
-                let c = LcSubclient::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcSubclient::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::Subclient(c))
             }
             LC_SUB_UMBRELLA => {
-                std::mem::drop(reader_mut);
-                let c = LcSubumbrella::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcSubumbrella::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::Subumbrella(c))
             }
             LC_SUB_LIBRARY => {
-                std::mem::drop(reader_mut);
-                let c = LcSublibrary::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcSublibrary::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::Sublibrary(c))
             }
             LC_PREBOUND_DYLIB => {
-                std::mem::drop(reader_mut);
-                let c = LcPreboundDylib::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcPreboundDylib::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::PreboundDylib(c))
             }
             LC_ID_DYLINKER => {
-                std::mem::drop(reader_mut);
-                let c = LcDylinker::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcDylinker::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::IdDylinker(c))
             }
             LC_LOAD_DYLINKER => {
-                std::mem::drop(reader_mut);
-                let c = LcDylinker::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcDylinker::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::LoadDylinker(c))
             }
             LC_DYLD_ENVIRONMENT => {
-                std::mem::drop(reader_mut);
-                let c = LcDylinker::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcDylinker::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::DyldEnvironment(c))
             }
             LC_THREAD => {
-                std::mem::drop(reader_mut);
                 let c = LcThread::parse(reader, cmdsize, base_offset, endian)?;
                 Ok(Self::Thread(c))
             }
             LC_UNIXTHREAD => {
-                std::mem::drop(reader_mut);
                 let c = LcThread::parse(reader, cmdsize, base_offset, endian)?;
                 Ok(Self::Thread(c))
             }
             LC_ROUTINES => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::Routines(c))
             }
             LC_ROUTINES_64 => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::Routines64(c))
             }
             LC_SYMTAB => {
-                std::mem::drop(reader_mut);
                 let c =
-                    LcSymtab::parse(reader_clone, is_64, base_offset, endian, object_file_offset)?;
+                    LcSymtab::parse(reader, is_64, base_offset, endian, object_file_offset)?;
                 Ok(Self::Symtab(c))
             }
             LC_DYSYMTAB => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::Dysimtab(c))
             }
             LC_TWOLEVEL_HINTS => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::TwoLevelHints(c))
             }
             LC_PREBIND_CKSUM => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::PrebindChekSum(c))
             }
             LC_UUID => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::Uuid(c))
             }
             LC_RPATH => {
-                std::mem::drop(reader_mut);
-                let c = LcRpath::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcRpath::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::Rpath(c))
             }
             LC_CODE_SIGNATURE => {
-                std::mem::drop(reader_mut);
                 let c =
-                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
+                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::CodeSignature(c))
             }
             LC_SEGMENT_SPLIT_INFO => {
-                std::mem::drop(reader_mut);
                 let c =
-                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
+                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::SegmentSplitInfo(c))
             }
             LC_FUNCTION_STARTS => {
-                std::mem::drop(reader_mut);
                 let c =
-                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
+                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::FunctionStarts(c))
             }
             LC_DATA_IN_CODE => {
-                std::mem::drop(reader_mut);
                 let c =
-                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
+                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::DataInCode(c))
             }
             LC_DYLIB_CODE_SIGN_DRS => {
-                std::mem::drop(reader_mut);
                 let c =
-                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
+                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::DylibCodeSignature(c))
             }
             LC_LINKER_OPTIMIZATION_HINT => {
-                std::mem::drop(reader_mut);
                 let c =
-                    LcLinkEditData::parse(reader_clone, base_offset, object_file_offset, endian)?;
+                    LcLinkEditData::parse(reader, base_offset, object_file_offset, endian)?;
                 Ok(Self::LinkerOptimizationHint(c))
             }
             LC_ENCRYPTION_INFO => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::EncryptionInfo(c))
             }
             LC_ENCRYPTION_INFO_64 => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::EncryptionInfo64(c))
             }
             LC_VERSION_MIN_MACOSX => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::VersionMinMacOsx(c))
             }
             LC_VERSION_MIN_IPHONEOS => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::VersionMinIphoneOs(c))
             }
             LC_VERSION_MIN_WATCHOS => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::VersionMinWatchOs(c))
             }
             LC_VERSION_MIN_TVOS => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::VersionMinTvOs(c))
             }
             LC_BUILD_VERSION => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::BuildVersion(c))
             }
             LC_DYLD_INFO => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::DyldInfo(c))
             }
             LC_DYLD_INFO_ONLY => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::DyldInfoOnly(c))
             }
             LC_LINKER_OPTION => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::LinkerOption(c))
             }
             LC_SYMSEG => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::SymSeg(c))
             }
             LC_FVMFILE => {
-                std::mem::drop(reader_mut);
-                let c = LcFvmFile::parse(reader_clone, command_offset, base_offset, endian)?;
+                let c = LcFvmFile::parse(reader, command_offset, base_offset, endian)?;
                 Ok(Self::FvmFile(c))
             }
             LC_MAIN => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::EntryPoint(c))
             }
             LC_SOURCE_VERSION => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::SourceVersion(c))
             }
             LC_NOTE => {
-                let c = reader_mut.ioread_with(endian)?;
+                let c = reader.ioread_with(endian)?;
                 Ok(Self::Note(c))
             }
             _ => Ok(Self::Other),

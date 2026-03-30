@@ -1,4 +1,4 @@
-use crate::RcReader;
+use crate::Reader;
 use crate::Result;
 use crate::Version32;
 
@@ -24,25 +24,22 @@ pub struct LcDylib {
 
 impl LcDylib {
     pub(super) fn parse(
-        reader: RcReader,
+        mut reader: Reader,
         command_offset: usize,
         base_offset: usize,
         endian: scroll::Endian,
     ) -> Result<Self> {
-        let mut reader_mut = reader.borrow_mut();
-        reader_mut.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset as u64))?;
 
-        let name_offset: u32 = reader_mut.ioread_with(endian)?;
-        let timestamp: u32 = reader_mut.ioread_with(endian)?;
-        let current_version: Version32 = reader_mut.ioread_with(endian)?;
-        let compatibility_version: Version32 = reader_mut.ioread_with(endian)?;
+        let name_offset: u32 = reader.ioread_with(endian)?;
+        let timestamp: u32 = reader.ioread_with(endian)?;
+        let current_version: Version32 = reader.ioread_with(endian)?;
+        let compatibility_version: Version32 = reader.ioread_with(endian)?;
 
         let name_offset = name_offset + command_offset as u32;
 
-        std::mem::drop(reader_mut);
-
         let name = LcStr {
-            reader: reader.clone(),
+            reader,
             file_offset: name_offset,
         };
 

@@ -4,14 +4,14 @@ use std::fmt::Debug;
 use std::io::{Read, Seek, SeekFrom, Write};
 
 use crate::auto_enum_fields::*;
-use crate::reader::RcReader;
+use crate::reader::Reader;
 use schnauzer_derive::AutoEnumFields;
 
 /// `linkedit_data_command`
 #[repr(C)]
 #[derive(AutoEnumFields)]
 pub struct LcLinkEditData {
-    reader: RcReader,
+    reader: Reader,
     object_file_offset: u64,
 
     pub dataoff: u32,
@@ -20,22 +20,18 @@ pub struct LcLinkEditData {
 
 impl LcLinkEditData {
     pub(super) fn parse(
-        reader: RcReader,
+        mut reader: Reader,
         base_offset: usize,
         object_file_offset: u64,
         endian: scroll::Endian,
     ) -> crate::result::Result<Self> {
-        let reader_clone = reader.clone();
+        reader.seek(SeekFrom::Start(base_offset as u64))?;
 
-        let mut reader_mut = reader.borrow_mut();
-        reader_mut.seek(SeekFrom::Start(base_offset as u64))?;
-
-        let dataoff: u32 = reader_mut.ioread_with(endian)?;
-        let datasize: u32 = reader_mut.ioread_with(endian)?;
-        std::mem::drop(reader_mut);
+        let dataoff: u32 = reader.ioread_with(endian)?;
+        let datasize: u32 = reader.ioread_with(endian)?;
 
         Ok(LcLinkEditData {
-            reader: reader_clone,
+            reader,
             object_file_offset,
             dataoff,
             datasize,
@@ -46,7 +42,7 @@ impl LcLinkEditData {
         use std::cmp::min;
         const BUFFER_SIZE: usize = 4096;
 
-        let mut reader = self.reader.borrow_mut();
+        let mut reader = self.reader.clone();
         reader.seek(SeekFrom::Start(
             self.object_file_offset + self.dataoff as u64,
         ))?;

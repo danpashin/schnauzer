@@ -1,5 +1,5 @@
 use crate::constants::*;
-use crate::RcReader;
+use crate::Reader;
 use crate::Result;
 
 use scroll::IOread;
@@ -16,7 +16,7 @@ use crate::nlist::*;
 #[repr(C)]
 #[derive(AutoEnumFields)]
 pub struct LcSymtab {
-    reader: RcReader,
+    reader: Reader,
 
     pub is_64: bool,
 
@@ -31,24 +31,21 @@ pub struct LcSymtab {
 
 impl LcSymtab {
     pub(super) fn parse(
-        reader: RcReader,
+        mut reader: Reader,
         is_64: bool,
         base_offset: usize,
         endian: scroll::Endian,
         object_file_offset: u64,
     ) -> Result<Self> {
-        let reader_clone = reader.clone();
-        let mut reader_mut = reader.borrow_mut();
+        reader.seek(SeekFrom::Start(base_offset as u64))?;
 
-        reader_mut.seek(SeekFrom::Start(base_offset as u64))?;
-
-        let symoff: u32 = reader_mut.ioread_with(endian)?;
-        let nsyms: u32 = reader_mut.ioread_with(endian)?;
-        let stroff: u32 = reader_mut.ioread_with(endian)?;
-        let strsize: u32 = reader_mut.ioread_with(endian)?;
+        let symoff: u32 = reader.ioread_with(endian)?;
+        let nsyms: u32 = reader.ioread_with(endian)?;
+        let stroff: u32 = reader.ioread_with(endian)?;
+        let strsize: u32 = reader.ioread_with(endian)?;
 
         Ok(LcSymtab {
-            reader: reader_clone,
+            reader,
             is_64,
             symoff,
             nsyms,
@@ -86,7 +83,7 @@ impl LcSymtab {
 }
 
 pub struct NlistIterator {
-    reader: RcReader,
+    reader: Reader,
     pub is_64: bool,
 
     symoff: u64,
@@ -99,7 +96,7 @@ pub struct NlistIterator {
 
 impl NlistIterator {
     fn new(
-        reader: RcReader,
+        reader: Reader,
         is_64: bool,
         symoff: u64,
         stroff: u64,
@@ -126,19 +123,15 @@ impl Iterator for NlistIterator {
             return None;
         }
 
-        let mut reader_mut = self.reader.borrow_mut();
-
         let offset = match self.is_64 {
             true => self.symoff + BYTES_PER_NLIST64 as u64 * self.current as u64,
             false => self.symoff + BYTES_PER_NLIST32 as u64 * self.current as u64,
         };
-        if let Err(_) = reader_mut.seek(SeekFrom::Start(offset)) {
+        if let Err(_) = self.reader.seek(SeekFrom::Start(offset)) {
             return None;
         }
 
         self.current += 1;
-
-        std::mem::drop(reader_mut);
 
         if let Ok(nlist) = Nlist::parse(self.reader.clone(), self.stroff, self.is_64, self.endian) {
             return Some(nlist);

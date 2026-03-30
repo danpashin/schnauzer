@@ -1,7 +1,7 @@
 //! `shnauzer` is a library for parsing Mach-O files
-//! 
+//!
 //! #References
-//! 
+//!
 
 pub mod result;
 pub mod types;
@@ -21,30 +21,22 @@ use std::path::Path;
 
 use self::result::Result;
 pub use types::*;
-
-use std::cell::RefCell;
-use std::rc::Rc;
 use reader::Reader;
-
-type RcCell<T> = Rc<RefCell<T>>;
-
-use reader::RcReader;
 
 /// Topmost struct in the library.
 /// Reads file in lazy manner (doesn't load all contents to memory).
 pub struct Parser {
-    reader: RcReader
+    reader: Reader,
 }
 
 impl Parser {
-    /// Provide a valid path to binary, library, object file, e.t.c.. 
+    /// Provide a valid path to binary, library, object file, e.t.c..
     /// Full list of mach-o files you can find there - [filetype_constants].
     /// For example: `/bin/cat`.
-    pub fn build(path: &Path) -> Result<Parser> {
-        let reader = Reader::build(path)?;
-        Ok(Parser {
-            reader
-        })
+    pub fn with_file(path: &Path) -> Result<Parser> {
+        let file = std::fs::File::open(path)?;
+        let reader = Reader::new(file);
+        Ok(Parser { reader })
     }
 
     /// Returns appropriate object - [FatObject] or [MachObject]
@@ -62,29 +54,29 @@ mod tests {
     #[test]
     fn test_can_output() {
         let path = Path::new("testable/cat");
-        let parser = Parser::build(path).unwrap();
+        let parser = Parser::with_file(path).unwrap();
         let obj = parser.parse().unwrap();
         println!("{:#?}", obj);
     }
-    
+
     #[test]
     fn test_basic_parsing_stability() {
         let path = Path::new("testable/cat");
-        let parser = Parser::build(path).unwrap();
+        let parser = Parser::with_file(path).unwrap();
         let obj = parser.parse().unwrap();
 
         let first = format!("{:#?}", obj);
         let second = format!("{:#?}", obj);
-        
+
         assert_eq!(first, second, "Somewhere invalid offset used while parsing!");
     }
 
     #[test]
     fn test_binary() {
         let path = Path::new("testable/cat");
-        let parser = Parser::build(path).unwrap();
+        let parser = Parser::with_file(path).unwrap();
         let obj = parser.parse().unwrap();
-        
+
         let fat_header = if let ObjectType::Fat(f) = obj {
             f
         } else {
@@ -113,13 +105,12 @@ mod tests {
         }
     }
 
-    
     #[test]
     fn test_arch_with_header_consistency() {
         let path = Path::new("testable/cat");
-        let parser = Parser::build(path).unwrap();
+        let parser = Parser::with_file(path).unwrap();
         let obj = parser.parse().unwrap();
-        
+
         let fat_header = if let ObjectType::Fat(f) = obj {
             f
         } else {
@@ -131,5 +122,4 @@ mod tests {
             assert_eq!(arch.cpusubtype.0, arch.object().unwrap().header().cpusubtype.0);
         }
     }
-    
 }

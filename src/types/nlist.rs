@@ -2,7 +2,7 @@
 
 use super::Hu64;
 use crate::LcStr;
-use crate::RcReader;
+use crate::Reader;
 use crate::Result;
 use crate::X64Context;
 
@@ -98,30 +98,27 @@ pub struct Nlist {
 
 impl Nlist {
     pub(super) fn parse(
-        reader: RcReader,
+        mut reader: Reader,
         stroff: u64,
         is_64: bool,
         endian: scroll::Endian,
     ) -> Result<Self> {
-        let reader_clone = reader.clone();
-        let mut reader_mut = reader.borrow_mut();
-
-        let n_strx: u32 = reader_mut.ioread_with(endian)?;
-        let n_type: Ntype = reader_mut.ioread_with(endian)?;
-        let n_sect: u8 = reader_mut.ioread_with(endian)?;
-        let n_desc: u16 = reader_mut.ioread_with(endian)?;
+        let n_strx: u32 = reader.ioread_with(endian)?;
+        let n_type: Ntype = reader.ioread_with(endian)?;
+        let n_sect: u8 = reader.ioread_with(endian)?;
+        let n_desc: u16 = reader.ioread_with(endian)?;
 
         let ctx = if is_64 {
             X64Context::On(endian)
         } else {
             X64Context::Off(endian)
         };
-        let n_value: Hu64 = reader_mut.ioread_with(ctx)?;
+        let n_value: Hu64 = reader.ioread_with(ctx)?;
 
         // If `n_strx > 0`, name is not neccessarily have value. In case of stab it may be an empty string
         let name: Option<LcStr> = if n_strx > 0 {
             Some(NlistStr {
-                reader: reader_clone,
+                reader,
                 file_offset: stroff as u32 + n_strx,
             })
         } else {
@@ -527,7 +524,7 @@ impl StabType {
                 n_name: NnameOption::None,
                 n_sect: NsectOption::Some,
                 n_desc: NdescOption::None,
-                n_value:NvalueOption::Address,
+                n_value: NvalueOption::Address,
             },
             // structure elt: name,,NO_SECT,type,struct_offset
             StabType::Ssym => SymbolOptions {

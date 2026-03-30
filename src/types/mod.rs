@@ -2,7 +2,7 @@ use scroll::IOread;
 use std::fmt::{Debug};
 
 use super::result::Result;
-use super::reader::RcReader;
+use super::reader::Reader;
 
 pub mod primitives;
 pub use primitives::*;
@@ -51,8 +51,8 @@ pub enum ObjectType {
 }
 
 impl ObjectType {
-    pub(super) fn parse(reader: RcReader) -> Result<ObjectType> {
-        let magic = reader.borrow_mut().ioread_with::<u32>(scroll::BE)?;
+    pub(super) fn parse(mut reader: Reader) -> Result<ObjectType> {
+        let magic = reader.ioread_with::<u32>(scroll::BE)?;
         let magic: Magic = magic.try_into()?;
         if magic.is_fat() {
             let header = FatObject::parse(reader.clone())?;

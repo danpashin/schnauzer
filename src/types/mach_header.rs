@@ -1,7 +1,7 @@
 use super::auto_enum_fields::*;
 use super::primitives::*;
 use super::Magic;
-use super::RcReader;
+use super::Reader;
 use super::Result;
 use schnauzer_derive::AutoEnumFields;
 use scroll::IOread;
@@ -22,12 +22,10 @@ pub struct MachHeader {
 
 impl MachHeader {
     /// We assume reader is already stands on correct position
-    pub(super) fn parse(reader: RcReader) -> Result<MachHeader> {
-        let mut reader_mut = reader.borrow_mut();
-
+    pub(super) fn parse(mut reader: Reader) -> Result<MachHeader> {
         let mut ctx = scroll::BE;
 
-        let magic: u32 = reader_mut.ioread_with(ctx)?;
+        let magic: u32 = reader.ioread_with(ctx)?;
         let magic: Magic = magic.try_into()?;
 
         if magic.is_reverse() {
@@ -35,16 +33,16 @@ impl MachHeader {
         }
         let ctx = ctx;
 
-        let cpu_type: CPUType = reader_mut.ioread_with(ctx)?;
-        let cpu_subtype: CPUSubtype = reader_mut.ioread_with(ctx)?;
-        let file_type: FileType = reader_mut.ioread_with(ctx)?;
-        let ncmds: u32 = reader_mut.ioread_with(ctx)?;
-        let size_of_cmds: u32 = reader_mut.ioread_with(ctx)?;
-        let flags: ObjectFlags = reader_mut.ioread_with(ctx)?;
+        let cpu_type: CPUType = reader.ioread_with(ctx)?;
+        let cpu_subtype: CPUSubtype = reader.ioread_with(ctx)?;
+        let file_type: FileType = reader.ioread_with(ctx)?;
+        let ncmds: u32 = reader.ioread_with(ctx)?;
+        let size_of_cmds: u32 = reader.ioread_with(ctx)?;
+        let flags: ObjectFlags = reader.ioread_with(ctx)?;
 
         let mut reserved = 0u32;
         if magic.is_64() {
-            reserved = reader_mut.ioread_with(ctx)?;
+            reserved = reader.ioread_with(ctx)?;
         }
 
         Ok(MachHeader {

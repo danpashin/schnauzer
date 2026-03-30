@@ -1,9 +1,8 @@
-use crate::RcReader;
+use crate::Reader;
 use crate::Result;
 
-use scroll::{IOread};
-
-use std::fmt::Debug;
+use scroll::IOread;
+use std::fmt::{Debug, Formatter};
 use std::io::{Seek, SeekFrom};
 use std::mem::size_of;
 
@@ -15,9 +14,9 @@ const LC_THREAD_FLAVOR_HEADER_SIZE: u32 = size_of::<u32>() as u32 + size_of::<u3
 
 /// `thread_command`
 #[repr(C)]
-#[derive(AutoEnumFields,Debug)]
+#[derive(AutoEnumFields)]
 pub struct LcThread {
-    reader: RcReader,
+    reader: Reader,
 
     cmdsize: u32,
     base_offset: usize,
@@ -25,12 +24,27 @@ pub struct LcThread {
 }
 
 impl LcThread {
-    pub(super) fn parse(reader: RcReader, cmdsize: u32, base_offset: usize, endian: scroll::Endian) -> Result<Self> {
-        Ok(LcThread { reader, cmdsize, base_offset, endian })
+    pub(super) fn parse(
+        reader: Reader,
+        cmdsize: u32,
+        base_offset: usize,
+        endian: scroll::Endian,
+    ) -> Result<Self> {
+        Ok(LcThread {
+            reader,
+            cmdsize,
+            base_offset,
+            endian,
+        })
     }
 
     pub fn flavor_iterator(&self) -> FlavorIterator {
-        FlavorIterator::new(self.reader.clone(), self.cmdsize, self.base_offset, self.endian)
+        FlavorIterator::new(
+            self.reader.clone(),
+            self.cmdsize,
+            self.base_offset,
+            self.endian,
+        )
     }
 }
 
@@ -41,26 +55,32 @@ pub struct LcThreadFlavor {
     pub count: u32,
     /* struct XXX_thread_state state   thread state for this flavor */
     /* ... */
-
-    state_offset: u64
+    state_offset: u64,
 }
 
 impl LcThreadFlavor {
-    pub(super) fn parse(reader: &RcReader, base_offset: usize, endian: scroll::Endian) -> Result<Option<Self>> {
-        let mut reader_mut = reader.borrow_mut();
-        reader_mut.seek(SeekFrom::Start(base_offset as u64))?;
+    pub(super) fn parse(
+        mut reader: Reader,
+        base_offset: usize,
+        endian: scroll::Endian,
+    ) -> Result<Option<Self>> {
+        reader.seek(SeekFrom::Start(base_offset as u64))?;
 
-        let flavor: u32 = reader_mut.ioread_with(endian)?;
-        let count: u32 = reader_mut.ioread_with(endian)?;
+        let flavor: u32 = reader.ioread_with(endian)?;
+        let count: u32 = reader.ioread_with(endian)?;
 
-        let state_offset = reader_mut.stream_position()?;
+        let state_offset = reader.stream_position()?;
 
         if flavor == 0 && count == 0 {
             // We reached the end of the list
             return Ok(None);
         }
 
-        Ok(Some(LcThreadFlavor { flavor, count, state_offset }))
+        Ok(Some(LcThreadFlavor {
+            flavor,
+            count,
+            state_offset,
+        }))
     }
 
     pub fn get_state_offset(&self) -> u64 {
@@ -86,7 +106,7 @@ impl Debug for LcThreadFlavor {
 }
 
 pub struct FlavorIterator {
-    reader: RcReader,
+    reader: Reader,
     base_offset: usize,
     cmdsize: u32,
     endian: scroll::Endian,
@@ -95,7 +115,7 @@ pub struct FlavorIterator {
 }
 
 impl FlavorIterator {
-    fn new(reader: RcReader, cmdsize: u32, base_offset: usize, endian: scroll::Endian) -> Self {        
+    fn new(reader: Reader, cmdsize: u32, base_offset: usize, endian: scroll::Endian) -> Self {
         FlavorIterator {
             reader,
             base_offset,
@@ -116,18 +136,26 @@ impl Iterator for FlavorIterator {
 
         let offset = self.base_offset + self.current as usize;
 
-        match LcThreadFlavor::parse(&self.reader, offset as usize, self.endian) {
+        match LcThreadFlavor::parse(self.reader.clone(), offset as usize, self.endian) {
             Ok(Some(lc_thread_flavor)) => {
                 self.current += lc_thread_flavor.calculate_flavor_size();
                 Some(lc_thread_flavor)
-            },
+            }
 
             Ok(None) => {
                 self.current = self.cmdsize;
                 None
-            },
+            }
 
             Err(_) => None,
         }
+    }
+}
+
+impl Debug for LcThread {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LcThread")
+            .field("cmdsize", &self.cmdsize)
+            .finish_non_exhaustive()
     }
 }

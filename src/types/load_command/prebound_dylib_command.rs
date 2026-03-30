@@ -1,4 +1,4 @@
-use crate::RcReader;
+use crate::Reader;
 use crate::Result;
 
 use scroll::{IOread};
@@ -23,22 +23,19 @@ pub struct LcPreboundDylib {
 
 impl LcPreboundDylib {
     pub(super) fn parse(
-        reader: RcReader,
+        mut reader: Reader,
         command_offset: usize,
         base_offset: usize,
         endian: scroll::Endian,
     ) -> Result<Self> {
-        let mut reader_mut = reader.borrow_mut();
-        reader_mut.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset as u64))?;
 
-        let name_offset: u32 = reader_mut.ioread_with(endian)?;
-        let nmodules: u32 = reader_mut.ioread_with(endian)?;
-        let linked_modules_offset: u32 = reader_mut.ioread_with(endian)?;
+        let name_offset: u32 = reader.ioread_with(endian)?;
+        let nmodules: u32 = reader.ioread_with(endian)?;
+        let linked_modules_offset: u32 = reader.ioread_with(endian)?;
 
         let name_offset = name_offset + command_offset as u32;
         let linked_modules_offset = linked_modules_offset + command_offset as u32;
-
-        std::mem::drop(reader_mut);
 
         let name = LcStr {
             reader: reader.clone(),
@@ -46,7 +43,7 @@ impl LcPreboundDylib {
         };
 
         let linked_modules = BitVec {
-            reader: reader.clone(),
+            reader,
             file_offset: linked_modules_offset,
             bytecount: nmodules,
         };

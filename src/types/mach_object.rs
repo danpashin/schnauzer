@@ -1,6 +1,6 @@
 use super::LoadCommand;
 use super::MachHeader;
-use super::RcReader;
+use super::Reader;
 use super::Result;
 
 use std::fmt::Debug;
@@ -8,7 +8,7 @@ use std::io::{Seek, SeekFrom};
 
 #[derive(Clone)]
 pub struct MachObject {
-    reader: RcReader,
+    reader: Reader,
 
     pub(super) header: MachHeader,
     pub(super) commands_offset: usize,
@@ -18,18 +18,14 @@ pub struct MachObject {
 }
 
 impl MachObject {
-    pub(super) fn parse(reader: RcReader, base_offset: usize) -> Result<MachObject> {
-        let mut reader_mut = reader.borrow_mut();
-        reader_mut.seek(SeekFrom::Start(base_offset as u64))?;
-        // We should drop it explicitly before used in `MachHeader`
-        std::mem::drop(reader_mut);
+    pub(super) fn parse(mut reader: Reader, base_offset: usize) -> Result<MachObject> {
+        reader.seek(SeekFrom::Start(base_offset as u64))?;
 
         let header = MachHeader::parse(reader.clone())?;
 
-        let mut reader_mut = reader.borrow_mut();
-        // After reading the header `reader_mut` should stand on
+        // After reading the header `reader` should stand on
         // start of load commands list
-        let commands_offset = reader_mut.stream_position()? as usize;
+        let commands_offset = reader.stream_position()? as usize;
 
         Ok(MachObject {
             reader: reader.clone(),
@@ -78,7 +74,7 @@ impl Debug for MachObject {
     }
 }
 pub struct LoadCommandIterator {
-    reader: RcReader,
+    reader: Reader,
     current_offset: usize,
     end_offset: usize,
     endian: scroll::Endian,
@@ -88,7 +84,7 @@ pub struct LoadCommandIterator {
 
 impl LoadCommandIterator {
     fn new(
-        reader: RcReader,
+        reader: Reader,
         base_offset: usize,
         size_of_cmds: u32,
         endian: scroll::Endian,
@@ -121,7 +117,7 @@ impl Iterator for LoadCommandIterator {
             self.is_64,
             self.object_file_offset,
         )
-        .unwrap();
+            .unwrap();
 
         self.current_offset += lc.cmdsize as usize;
 

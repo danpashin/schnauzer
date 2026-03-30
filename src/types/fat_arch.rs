@@ -1,4 +1,4 @@
-use super::RcReader;
+use super::Reader;
 use scroll::IOread;
 use super::primitives::*;
 use super::Result;
@@ -12,7 +12,7 @@ use schnauzer_derive::AutoEnumFields;
 
 #[derive(AutoEnumFields)]
 pub struct FatArch {
-    pub(crate) reader: RcReader,
+    pub(crate) reader: Reader,
 
     pub cputype: CPUType,
     pub cpusubtype: CPUSubtype,
@@ -22,16 +22,15 @@ pub struct FatArch {
 }
 
 impl FatArch {
-    pub(super) fn parse(reader: RcReader, base_offset: usize) -> Result<FatArch> {
+    pub(super) fn parse(mut reader: Reader, base_offset: usize) -> Result<FatArch> {
         const ENDIAN: scroll::Endian = scroll::BE;
-        let mut reader_mut = reader.borrow_mut();
-        reader_mut.seek(SeekFrom::Start(base_offset as u64))?;
+        reader.seek(SeekFrom::Start(base_offset as u64))?;
 
-        let cpu_type: CPUType = reader_mut.ioread_with(ENDIAN)?;
-        let cpu_subtype: CPUSubtype = reader_mut.ioread_with(ENDIAN)?;
-        let offset: u32 = reader_mut.ioread_with(ENDIAN)?;
-        let size: u32 = reader_mut.ioread_with(ENDIAN)?;
-        let align: u32 = reader_mut.ioread_with(ENDIAN)?;
+        let cpu_type: CPUType = reader.ioread_with(ENDIAN)?;
+        let cpu_subtype: CPUSubtype = reader.ioread_with(ENDIAN)?;
+        let offset: u32 = reader.ioread_with(ENDIAN)?;
+        let size: u32 = reader.ioread_with(ENDIAN)?;
+        let align: u32 = reader.ioread_with(ENDIAN)?;
 
         Ok(FatArch {
             reader: reader.clone(),
