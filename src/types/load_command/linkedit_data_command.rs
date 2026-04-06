@@ -43,30 +43,19 @@ impl LcLinkEditData {
     }
 
     pub fn read_data_to(&self, out: &mut dyn Write) -> crate::result::Result<()> {
-        use std::cmp::min;
-        const BUFFER_SIZE: usize = 4096;
-
         self.reader.with_lock(|reader| {
             reader.seek(SeekFrom::Start(
                 self.object_file_offset + u64::from(self.dataoff),
             ))?;
 
-            let mut remainig = self.datasize as usize;
-
-            let mut tmp = [0u8; BUFFER_SIZE];
-
-            while remainig > 0 {
-                let to_read = min(remainig, BUFFER_SIZE);
-
-                if let Err(e) = reader.read_exact(&mut tmp[..to_read]) {
-                    return Err(crate::result::Error::Other(Box::new(e)));
-                }
-
-                if let Err(e) = out.write_all(&tmp[..to_read]) {
-                    return Err(crate::result::Error::Other(Box::new(e)));
-                }
-
-                remainig -= to_read;
+            let mut reader = reader.take(u64::from(self.datasize));
+            let count = std::io::copy(&mut reader, out)?;
+            if count != u64::from(self.datasize) {
+                let text = format!(
+                    "Expected to write {} bytes, wrote only {}",
+                    self.datasize, count
+                );
+                return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, text).into());
             }
 
             Ok(())

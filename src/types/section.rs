@@ -80,26 +80,19 @@ impl Section {
 
 impl Section {
     pub fn read_data_to(&self, out: &mut dyn Write) -> Result<()> {
-        use std::cmp::min;
-        const BUFFER_SIZE: usize = 4096;
-
         self.reader.with_lock(|reader| {
             reader.seek(SeekFrom::Start(
                 self.object_file_offset + u64::from(self.offset),
             ))?;
 
-            let mut remainig = usize::try_from(self.size.0)
-                .map_err(|err| std::io::Error::new(std::io::ErrorKind::FileTooLarge, err))?;
-
-            let mut tmp = vec![0u8; BUFFER_SIZE];
-
-            while remainig > 0 {
-                let to_read = min(remainig, BUFFER_SIZE);
-
-                reader.read_exact(&mut tmp[..to_read])?;
-                out.write_all(&tmp[..to_read])?;
-
-                remainig -= to_read;
+            let mut reader = reader.take(self.size.0);
+            let count = std::io::copy(&mut reader, out)?;
+            if count != self.size.0 {
+                let text = format!(
+                    "Expected to write {} bytes, wrote only {}",
+                    self.size, count
+                );
+                return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, text).into());
             }
 
             Ok(())
