@@ -22,7 +22,7 @@ mod reader;
 use std::path::Path;
 
 use self::result::Result;
-pub use reader::Reader;
+pub use reader::{Reader, ReadTrait};
 pub use types::*;
 
 /// Topmost struct in the library.
